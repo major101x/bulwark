@@ -13,6 +13,7 @@ import {
   classify,
   expectedLiquidationLoss,
   gasCostUsd,
+  horizonHours,
   type LossParams,
 } from './risk.ts';
 import type {
@@ -255,7 +256,7 @@ export function decide(
     remediation: worthIt ? best : undefined,
     rationale:
       `HF ${position.healthFactor.toFixed(3)} → ARMED. ` +
-      `P(liquidation) ${(probability * 100).toFixed(1)}% over next hour, ` +
+      `P(liquidation) ${(probability * 100).toFixed(2)}% over next ${horizonHours(tier)}h, ` +
       `loss if it happens $${lossIfLiquidated.toFixed(2)}, ` +
       `expected loss $${expectedLoss.toFixed(2)}. ` +
       `Cheapest rescue ${best.kind} at $${best.costUsd.toFixed(2)}. ` +

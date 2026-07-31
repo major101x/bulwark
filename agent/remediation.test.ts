@@ -9,7 +9,7 @@ import {
   repayAmountUsd,
   usdToBaseUnits,
 } from './remediation.ts';
-import { TARGET_HEALTH_FACTOR } from './risk.ts';
+import { TARGET_HEALTH_FACTOR, horizonHours } from './risk.ts';
 import type { GasSnapshot, PositionSnapshot, WalletBalances } from './types.ts';
 
 const LT = 0.82;
@@ -189,4 +189,14 @@ test('rationale carries the numbers a human needs to audit the call', () => {
   assert.match(d.rationale, /HF 1\.080/);
   assert.match(d.rationale, /\$/);
   assert.ok(d.rationale.length < 400, 'rationale must stay readable on screen');
+});
+
+test('rationale quotes the horizon the probability was actually computed over', () => {
+  // Regression: the horizon was hardcoded as "next hour" in the string while
+  // the ARMED probability is computed over 24h, so the sentence contradicted
+  // its own number. This line gets read aloud in the demo.
+  const d = decide(position(1.12), richWallet(), cheapGas);
+  assert.equal(d.tier, 'ARMED');
+  assert.match(d.rationale, new RegExp(`over next ${horizonHours('ARMED')}h`));
+  assert.doesNotMatch(d.rationale, /next hour/);
 });
