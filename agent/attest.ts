@@ -1,7 +1,7 @@
 /**
  * Mainnet attestation.
  *
- * Every decision — including the ones where we decline to spend gas — is
+ * Every decision, including the ones where we decline to spend gas, is
  * written to GuardianLog on Ethereum mainnet. These calls move no value, so
  * they need no capital, only gas, which KeeperHub sponsors on mainnet.
  *

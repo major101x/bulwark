@@ -6,7 +6,7 @@ pragma solidity ^0.8.24;
 /// @dev    Deliberately storage-free: the entire record lives in event logs, so
 ///         an attestation costs only the base transaction plus log data. That
 ///         matters because these run on Ethereum mainnet under KeeperHub's gas
-///         sponsorship, and they require no capital of their own — only gas.
+///         sponsorship, and they require no capital of their own, only gas.
 ///
 ///         Holds are recorded as well as rescues. A keeper that only logs its
 ///         successes is not an audit trail, and the interesting judgment calls

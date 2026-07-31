@@ -24,8 +24,8 @@ import type {
 } from './types.ts';
 
 /**
- * Gas estimates in units. Deliberately conservative — underestimating gas is
- * how a rescue reverts halfway through.
+ * Gas estimates in units. Deliberately conservative, because underestimating
+ * gas is how a rescue reverts halfway through.
  *
  * TODO(day-3): replace with live estimates from KeeperHub's simulation step
  * rather than these constants.
@@ -259,7 +259,7 @@ export function decide(
       `loss if it happens $${lossIfLiquidated.toFixed(2)}, ` +
       `expected loss $${expectedLoss.toFixed(2)}. ` +
       `Cheapest rescue ${best.kind} at $${best.costUsd.toFixed(2)}. ` +
-      `Ratio ${base.benefitRatio.toFixed(1)}× vs ${SAFETY_MARGIN}× margin — ` +
+      `Ratio ${base.benefitRatio.toFixed(1)}× vs ${SAFETY_MARGIN}× margin: ` +
       `${worthIt ? 'rescuing' : 'holding, gas not justified yet'}.`,
   };
 }

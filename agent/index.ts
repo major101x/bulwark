@@ -54,7 +54,7 @@ async function handleEvaluate(body: EvaluateBody) {
   console.log(`[${new Date().toISOString()}] ${decision.rationale}`);
 
   if (config.dryRun) {
-    console.log('  DRY_RUN=1 — computed only, nothing executed.');
+    console.log('  DRY_RUN=1: computed only, nothing executed.');
     return { ...decision, executed: false, dryRun: true };
   }
 
@@ -135,5 +135,5 @@ const server = createServer((req, res) => {
 
 server.listen(config.agentPort, () => {
   console.log(`GasGuard listening on :${config.agentPort}`);
-  console.log(config.dryRun ? 'DRY_RUN is ON — nothing will execute.' : '⚠️  LIVE MODE');
+  console.log(config.dryRun ? 'DRY_RUN is ON, nothing will execute.' : '⚠️  LIVE MODE');
 });

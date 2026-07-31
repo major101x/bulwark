@@ -5,9 +5,9 @@
  * two implementations and the chaos harness runs identical workloads against
  * both:
  *
- *   KeeperHubBackend — simulation, gas escalation, nonce management, private
+ *   KeeperHubBackend: simulation, gas escalation, nonce management, private
  *                      routing. Keys stay in Turnkey enclaves.
- *   NaiveBackend     — plain ethers.js with a static gas price and no retry.
+ *   NaiveBackend:     plain ethers.js with a static gas price and no retry.
  *                      What most agents actually ship, and the baseline whose
  *                      failure rate we are trying to measure.
  *
@@ -181,7 +181,7 @@ export class KeeperHubBackend implements ExecutionBackend {
 /**
  * The control group for the chaos harness. Static gas price, single attempt,
  * no simulation, no nonce reconciliation. Every shortcoming here is
- * deliberate — this is the baseline we are measuring against, and making it
+ * deliberate: this is the baseline we are measuring against, and making it
  * artificially competent would flatter our own numbers.
  */
 export class NaiveBackend implements ExecutionBackend {

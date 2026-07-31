@@ -2,9 +2,9 @@
  * Shared domain types.
  *
  * All USD amounts are plain JS numbers (dollars, not wei). Token amounts that
- * cross a chain boundary are bigint in base units. Keep that split strict —
- * mixing float dollars with base-unit integers is the classic way to send a
- * transaction that is off by 10^18.
+ * cross a chain boundary are bigint in base units. Keep that split strict,
+ * because mixing float dollars with base-unit integers is the classic way to
+ * send a transaction that is off by 10^18.
  */
 
 /** Where a position lives and what it currently looks like. */

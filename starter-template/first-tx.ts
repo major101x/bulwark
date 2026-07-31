@@ -37,7 +37,7 @@ const CHECKS: Array<{ label: string; hint: string; check: () => boolean }> = [
  * cannot submit the transaction that claims them.
  */
 const FAUCETS = [
-  ['Sepolia ETH (for gas — do this first)', 'https://www.alchemy.com/faucets/ethereum-sepolia'],
+  ['Sepolia ETH (for gas, do this first)', 'https://www.alchemy.com/faucets/ethereum-sepolia'],
   ['Aave test tokens (collateral and debt assets)', 'https://gho.aave.com/faucet/'],
   ['Base Sepolia USDC (only needed for the x402 work)', 'https://faucet.circle.com/'],
 ] as const;
@@ -69,7 +69,7 @@ function printFaucets(): void {
 }
 
 async function main(): Promise<void> {
-  console.log('KeeperHub — first transaction');
+  console.log('KeeperHub: first transaction');
 
   if (!preflight()) {
     printFaucets();

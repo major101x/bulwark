@@ -3,7 +3,7 @@
  *
  * The point of this module is restraint. Any agent can fire a repay the moment
  * a health factor dips. The interesting behaviour is declining to act when the
- * gas costs more than the liquidation would — and being able to show the
+ * gas costs more than the liquidation would, and being able to show the
  * arithmetic for why.
  */
 
@@ -48,7 +48,7 @@ export function pollIntervalBlocks(tier: RiskTier): number {
 /**
  * Decision horizon per tier, in hours.
  *
- * This is the *exposure window if we decline to act now* — not the poll
+ * This is the *exposure window if we decline to act now*, not the poll
  * interval. The distinction matters and was a real bug at first: sizing the
  * horizon to the poll interval (~1 hour) drove every ARMED probability to
  * underflow, so the cost/benefit branch could never fire and the whole tier
@@ -112,7 +112,7 @@ function normalCdf(z: number): number {
  * dips below 1.0 mid-window and recovers still gets liquidated, because
  * liquidators are watching every block. By the reflection principle, for a
  * driftless random walk the probability of *touching* a barrier is twice the
- * probability of *ending* beyond it — so a naive endpoint model understates
+ * probability of *ending* beyond it, so a naive endpoint model understates
  * the risk by about half.
  *
  * @param healthFactor    current HF
@@ -157,7 +157,7 @@ export const DEFAULT_LOSS_PARAMS: LossParams = {
 /**
  * Expected dollar loss from doing nothing.
  *
- * If liquidated, we lose the penalty on whatever slice gets repaid — not the
+ * If liquidated, we lose the penalty on whatever slice gets repaid, not the
  * whole position. Worked example: $10,000 debt, 50% close factor, 5% penalty
  * => $250 if it happens. Multiplied by the probability that it does.
  */
