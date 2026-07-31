@@ -33,11 +33,21 @@ export interface GasSnapshot {
   ethPriceUsd: number;
 }
 
-/** What the defended wallet is holding, so we know which remedies are open. */
+/**
+ * What the **keeper** wallet is holding, which is what decides the remedies
+ * available to us.
+ *
+ * Not the defended wallet. The keeper and the position are separate addresses:
+ * the position lives in the user's own wallet, and the keeper rescues it using
+ * Aave's `onBehalfOf` parameter. Feasibility therefore depends on what the
+ * keeper can spend, not on what the borrower happens to hold. Wiring this to
+ * the defended wallet's balances would produce an agent that confidently
+ * decides to repay and then reverts for insufficient funds.
+ */
 export interface WalletBalances {
-  /** Base units of the borrowed asset available to repay with. */
+  /** Base units of the borrowed asset the keeper can repay with. */
   debtAsset: bigint;
-  /** Base units of the collateral asset available to top up with. */
+  /** Base units of the collateral asset the keeper can top up with. */
   collateralAsset: bigint;
   debtAssetDecimals: number;
   collateralAssetDecimals: number;
