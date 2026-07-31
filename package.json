@@ -1,0 +1,26 @@
+{
+  "name": "gasguard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Liquidation-defense keeper that executes onchain through KeeperHub and funds its own gas via x402",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "tsx --test agent/*.test.ts chaos/*.test.ts",
+    "agent": "tsx agent/index.ts",
+    "chaos": "tsx chaos/harness.ts",
+    "typecheck": "tsc --noEmit",
+    "first-tx": "tsx starter-template/first-tx.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

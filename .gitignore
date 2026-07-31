@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.local
+*.log
+dist/
+chaos/runs/
+revenue.json
+wallet.json
