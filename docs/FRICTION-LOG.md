@@ -96,4 +96,58 @@ workflow spends a token, which is most of them.
 
 ---
 
+### 2026-07-31 Both hosted Aave testnet faucets were down
+
+**Doing:** Getting Sepolia test tokens to open the position.
+**Expected:** Click through gho.aave.com/faucet, as the Aave docs describe.
+**Got:** The faucet page did not work, and neither did the bridge button on
+app.aave.com, which now defaults to Base. Ended up calling the Sepolia faucet
+contract at 0xC959483DBa39aa9E78757139af0e9a2EDEb3f42D directly with a script.
+**Cost:** ~45 minutes, and it is a hard stop for anyone who cannot write a
+minting script.
+**Fix:** Not KeeperHub's bug, but it is squarely in KeeperHub's onboarding path,
+since every Aave-based tutorial starts here. A short "if the faucet is down,
+mint directly" snippet with the contract address in the KeeperHub docs would
+unblock people. Our `starter-template/` should ship this script.
+
+---
+
+### 2026-07-31 You cannot borrow a position into liquidation
+
+**Doing:** Driving the test position to a critical health factor to trigger the
+agent on camera.
+**Expected:** Borrow more against the same collateral until HF approaches 1.0.
+**Got:** Aave reverts with `execution reverted: "36"`, a bare number with no
+explanation. Decoded, that is COLLATERAL_CANNOT_COVER_NEW_BORROW. Borrowing is
+validated against the collateral's LTV (70%) while liquidation is measured
+against the liquidation threshold (75%), so borrowing bottoms out at
+LT / LTV = 1.0714 and cannot go lower. Withdrawing collateral is validated
+against HF >= 1 instead, and reaches any target above 1.0.
+**Cost:** ~30 minutes, most of it decoding "36".
+**Fix:** Two things. Aave's numeric revert codes are opaque and worth mapping in
+any tooling that wraps them, which we now do in `scripts/lib.ts`. More usefully
+for KeeperHub: a "how to drive a test position into danger" recipe would save
+every builder attempting a liquidation-adjacent demo the same 30 minutes, and
+liquidation defense is an obvious thing to build on an execution layer.
+
+---
+
+### 2026-07-31 search_protocol_actions returns nothing when protocol and query are combined
+
+**Doing:** Discovering the Aave action schemas through the MCP server.
+**Expected:** `{protocol: "aave-v3", query: "supply borrow repay health factor"}`
+to return the Aave actions, since the tool description gives 'aave-v3' as an
+example protocol value.
+**Got:** Zero results. The same call with `protocol` alone returns all 7 actions,
+and `query: "aave"` alone returns 16. The multi-word query appears to require
+every term to match, so combining a valid filter with a natural-language query
+silently returns nothing.
+**Cost:** ~5 minutes, but the failure mode is "this protocol is unsupported",
+which could send someone down a much longer detour.
+**Fix:** Either OR the query terms, or return a hint when a filter matches
+records but the query eliminates all of them. An empty result that means "your
+query was too specific" should not look identical to "not supported".
+
+---
+
 <!-- Add entries below as they happen. Do not batch them up. -->
