@@ -10,3 +10,5 @@
 
 - **Small commits.** One logical change per commit. Prefer several focused commits
   over a single large one, and commit as work completes rather than batching up.
+- **Use the global git identity.** Plain `git commit`. Never pass `-c user.name` or
+  `-c user.email`, and never infer an identity from session context.
