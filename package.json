@@ -12,7 +12,12 @@
     "agent": "tsx agent/index.ts",
     "chaos": "tsx chaos/harness.ts",
     "typecheck": "tsc --noEmit",
-    "first-tx": "tsx starter-template/first-tx.ts"
+    "first-tx": "tsx starter-template/first-tx.ts",
+    "pos:status": "tsx scripts/status.ts",
+    "pos:open": "tsx scripts/open-position.ts",
+    "pos:fund-keeper": "tsx scripts/fund-keeper.ts",
+    "pos:danger": "tsx scripts/danger.ts",
+    "pos:evaluate": "tsx scripts/evaluate.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

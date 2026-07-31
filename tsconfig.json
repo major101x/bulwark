@@ -15,5 +15,5 @@
     "noEmit": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["agent/**/*.ts", "chaos/**/*.ts", "starter-template/**/*.ts"]
+  "include": ["agent/**/*.ts", "chaos/**/*.ts", "scripts/**/*.ts", "starter-template/**/*.ts"]
 }
