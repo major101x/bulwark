@@ -1,6 +1,6 @@
 # GasGuard
 
-**A liquidation-defense keeper that executes onchain through KeeperHub — and pays for its own gas.**
+**A liquidation-defense keeper that executes onchain through KeeperHub, and pays for its own gas.**
 
 Built for the KeeperHub *Agents Onchain* hackathon. Full design in [SPEC.md](./SPEC.md).
 
@@ -8,17 +8,17 @@ Built for the KeeperHub *Agents Onchain* hackathon. Full design in [SPEC.md](./S
 
 ## Reliability scorecard
 
-> ⏳ **Not yet measured.** The harness lands day 7–8; these are the columns it fills.
+> ⏳ **Not yet measured.** The harness lands day 7-8; these are the columns it fills.
 > Numbers below are the table shape, **not results**. Do not cite them.
 
 | Scenario | KeeperHub | Naive ethers.js |
 |---|---|---|
-| Gas underpricing | — | — |
-| Congestion (20 concurrent) | — | — |
-| Nonce collision | — | — |
-| Revert (repay > debt) | — | — |
-| RPC flakiness | — | — |
-| Cold start | — | — |
+| Gas underpricing | n/a | n/a |
+| Congestion (20 concurrent) | n/a | n/a |
+| Nonce collision | n/a | n/a |
+| Revert (repay > debt) | n/a | n/a |
+| RPC flakiness | n/a | n/a |
+| Cold start | n/a | n/a |
 
 Reproduce with `npm run chaos -- --all`. Method in [SPEC.md §7](./SPEC.md).
 
@@ -27,8 +27,8 @@ Reproduce with `npm run chaos -- --all`. Method in [SPEC.md §7](./SPEC.md).
 ## What it does
 
 People borrow against crypto collateral. If the collateral falls far enough, anyone
-may **liquidate** them — repay part of the debt, seize collateral at a discount, and
-the borrower eats a 5–10% penalty.
+may **liquidate** them: repay part of the debt, seize collateral at a discount, and
+the borrower eats a 5-10% penalty.
 
 Spotting the danger is easy. Landing the rescue transaction is not: it has to execute
 at 3am, during a gas spike, without being front-run. GasGuard watches positions,
@@ -44,7 +44,7 @@ rescue is worth the gas, and declines when it is not:
 
 ```
 HF 1.120 → ARMED. P(liquidation) 0.7% over next 24h, loss if it happens $250.00,
-expected loss $1.85. Cheapest rescue REPAY at $4.44. Ratio 0.4× vs 3× margin —
+expected loss $1.85. Cheapest rescue REPAY at $4.44. Ratio 0.4× vs 3× margin:
 holding, gas not justified yet.
 ```
 
@@ -52,7 +52,7 @@ Liquidation probability uses a **first-passage** model, not an endpoint one: a p
 that dips below HF 1.0 mid-window and recovers still gets liquidated, because liquidators
 watch every block. By the reflection principle that roughly doubles the naive estimate.
 
-Health factor 1.10 comes out at a ~2.3% chance of touching liquidation within a day —
+Health factor 1.10 comes out at a ~2.3% chance of touching liquidation within a day,
 which lines up with how often collateral actually drops 9% in 24 hours.
 
 ## Architecture
@@ -97,7 +97,7 @@ npm test          # 43 tests, no network required
 npm run typecheck
 ```
 
-The decision logic is pure and fully testable offline — no RPC, no account, no keys.
+The decision logic is pure and fully testable offline: no RPC, no account, no keys.
 
 To run the agent, copy `.env.example` to `.env`. It starts with `DRY_RUN=1`, which
 computes and logs decisions without executing anything.
@@ -109,7 +109,7 @@ npm run agent
 ## Security
 
 The agent never handles a private key. KeeperHub keeps them in Turnkey enclaves, and
-the only key in this repo's config is `CHAOS_BASELINE_PRIVATE_KEY` — a throwaway
+the only key in this repo's config is `CHAOS_BASELINE_PRIVATE_KEY`, a throwaway
 Sepolia key used solely by the naive baseline in the chaos harness, holding worthless
 testnet funds.
 
@@ -118,7 +118,7 @@ testnet funds.
 ```
 agent/        decision logic (risk, remediation) + execution + attestation
 chaos/        failure injectors and the reliability harness
-contracts/    GuardianLog.sol — onchain audit trail
+contracts/    GuardianLog.sol, the onchain audit trail
 workflows/    exported KeeperHub workflow JSON
 docs/         friction log (bounty input), architecture notes
 starter-template/  zero-to-first-transaction, for the onboarding bounty

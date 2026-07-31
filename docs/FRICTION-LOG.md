@@ -1,8 +1,8 @@
 # Friction log
 
 Running record of everything confusing, broken, or slower than it should have
-been while building on KeeperHub. **Write entries while confused, not after** —
-once something makes sense you cannot reconstruct why it did not.
+been while building on KeeperHub. **Write entries while confused, not after.**
+Once something makes sense you cannot reconstruct why it did not.
 
 This feeds the Best Onboarding UX bounty (SPEC.md §12): the worst item becomes a
 PR, the rest become a teardown.
@@ -23,7 +23,7 @@ PR, the rest become a teardown.
 ### 2026-07-30 Repo scaffolded before account exists
 
 **Doing:** Setting up the project skeleton ahead of signing up.
-**Expected:** n/a — baseline entry.
+**Expected:** n/a, baseline entry.
 **Got:** Wrote the KeeperHub REST client against the published docs without
 being able to verify request or response shapes, because the API reference does
 not show a full example payload for `execute` or the execution status poll.
