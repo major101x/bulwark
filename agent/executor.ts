@@ -6,21 +6,18 @@
  * both:
  *
  *   KeeperHubBackend: simulation, gas escalation, nonce management, private
- *                      routing. Keys stay in Turnkey enclaves.
+ *                     routing, and gas sponsorship. Keys stay in enclaves.
  *   NaiveBackend:     plain ethers.js with a static gas price and no retry.
- *                      What most agents actually ship, and the baseline whose
- *                      failure rate we are trying to measure.
+ *                     What most agents actually ship, and the baseline whose
+ *                     failure rate we are trying to measure.
  *
- * ─────────────────────────────────────────────────────────────────────────
- * VERIFY BEFORE RELYING ON THIS FILE (SPEC.md §14)
- * The KeeperHub request/response shapes below are written from the published
- * docs but have NOT been exercised against a live account yet. Confirm the
- * endpoint paths and payload field names on day one, either by calling the
- * MCP tools (`execute_workflow`, `execute_protocol_action`) and inspecting the
- * wire format, or from the REST reference at docs.keeperhub.com.
- * ─────────────────────────────────────────────────────────────────────────
+ * Response parsing follows the shapes in `keeperhub-types.ts`, which were
+ * transcribed from real executions rather than from the docs. The REST paths
+ * below are still the documented ones and remain unconfirmed: our verified
+ * executions went through the MCP tools. See `TO VERIFY` markers.
  */
 
+import type { KeeperHubExecutionStatus } from './keeperhub-types.ts';
 import type { GasPolicy } from './risk.ts';
 
 export interface ExecutionRequest {
@@ -33,6 +30,13 @@ export interface ExecutionRequest {
   /** Native value in wei. Usually zero; we move ERC20s. */
   value?: bigint;
   gasPolicy?: GasPolicy;
+  /**
+   * Stable key so a retried rescue cannot execute twice. KeeperHub returns the
+   * original result for a repeat of the same key within 24h, which is the
+   * difference between a retry and a double spend when our process restarts
+   * mid-rescue.
+   */
+  idempotencyKey?: string;
 }
 
 export interface ExecutionResult {
@@ -48,6 +52,8 @@ export interface ExecutionResult {
   error?: string;
   /** Set when the transaction never mined within the deadline. */
   stuck?: boolean;
+  /** Whether KeeperHub covered the gas. Observed true on Sepolia as well. */
+  sponsored?: boolean;
 }
 
 export interface ExecutionBackend {
@@ -113,11 +119,15 @@ export class KeeperHubBackend implements ExecutionBackend {
         to: req.to,
         data: req.data,
         value: (req.value ?? 0n).toString(),
+        idempotencyKey: req.idempotencyKey,
         gas: req.gasPolicy
           ? {
               multipliers: req.gasPolicy.multipliers,
               blocksBetweenBumps: req.gasPolicy.blocksBetweenBumps,
               privateRouting: req.gasPolicy.privateRouting,
+              // KeeperHub exposes an explicit tip that bypasses its default
+              // priority-fee clamp, which is what the CRITICAL ladder needs.
+              priorityFeeGwei: req.gasPolicy.multipliers.at(-1),
             }
           : undefined,
       },
@@ -131,45 +141,54 @@ export class KeeperHubBackend implements ExecutionBackend {
     startedAt: number,
     timeoutMs = 5 * 60_000,
   ): Promise<ExecutionResult> {
-    let bumps = 0;
     while (Date.now() - startedAt < timeoutMs) {
-      // TO VERIFY: path, and the field names on the status payload.
-      const status = await this.request<{
-        state: 'pending' | 'submitted' | 'confirmed' | 'failed';
-        txHash?: string;
-        gasUsed?: string;
-        effectiveGasPriceGwei?: number;
-        attempts?: number;
-        error?: string;
-      }>('/api/v1/executions/get', { executionId });
+      // TO VERIFY: REST path. Confirmed via the MCP tool
+      // `get_direct_execution_status`, whose response this parses.
+      const status = await this.request<KeeperHubExecutionStatus>(
+        '/api/v1/executions/get',
+        { executionId },
+      );
 
-      bumps = Math.max(bumps, (status.attempts ?? 1) - 1);
+      // KeeperHub counts its own resubmissions, so we report its number rather
+      // than guessing from elapsed time.
+      const bumps = status.retryCount ?? 0;
 
-      if (status.state === 'confirmed') {
+      if (status.status === 'completed') {
+        // `status: completed` only means the execution finished, not that the
+        // transaction succeeded. A reverted call completes too, so the inner
+        // success flag is the one that decides.
+        const ok = status.result?.success === true && !status.result?.executedCall?.reverted;
         return {
-          ok: true,
-          txHash: status.txHash,
+          ok,
+          txHash: status.transactionHash ?? status.result?.transactionHash,
           latencyMs: Date.now() - startedAt,
           bumps,
-          gasUsed: status.gasUsed ? BigInt(status.gasUsed) : undefined,
-          effectiveGasPriceGwei: status.effectiveGasPriceGwei,
+          gasUsed: status.result?.gasUsed ? BigInt(status.result.gasUsed) : undefined,
+          effectiveGasPriceGwei: status.result?.effectiveGasPrice
+            ? Number(status.result.effectiveGasPrice) / 1e9
+            : undefined,
+          sponsored: status.result?.sponsored,
+          error: ok ? undefined : (status.error ?? 'reverted'),
         };
       }
-      if (status.state === 'failed') {
+
+      if (status.status === 'failed') {
         return {
           ok: false,
-          txHash: status.txHash,
+          txHash: status.transactionHash,
           latencyMs: Date.now() - startedAt,
           bumps,
           error: status.error ?? 'execution failed',
         };
       }
+
       await new Promise((r) => setTimeout(r, 2000));
     }
+
     return {
       ok: false,
       latencyMs: Date.now() - startedAt,
-      bumps,
+      bumps: 0,
       stuck: true,
       error: 'timed out waiting for inclusion',
     };
