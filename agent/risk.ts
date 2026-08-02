@@ -62,7 +62,14 @@ export function pollIntervalBlocks(tier: RiskTier): number {
 export function horizonHours(tier: RiskTier): number {
   switch (tier) {
     case 'CRITICAL':
-      return 0.25; // we are acting regardless; this only sizes the report
+      // Was 0.25h on the reasoning that we act regardless, so the number only
+      // sized a report. That was wrong twice over: a 15 minute window drives
+      // the probability to zero, so the audit trail recorded "expected loss
+      // $0.00" next to a rescue we had just paid for, which reads as
+      // incoherent to anyone reviewing it. The exposure window is the same
+      // question at every tier, so it gets the same answer: 24h. At HF 1.04
+      // that yields ~34%, which is both alarming and defensible.
+      return 24;
     case 'ARMED':
       return 24;
     case 'WATCH':

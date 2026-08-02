@@ -168,3 +168,23 @@ test('gas budget is hard-capped against a bad oracle read', () => {
   const policy = gasPolicyFor('CRITICAL', 10_000_000, 250);
   assert.equal(policy.maxCostUsd, 250);
 });
+
+test('critical-tier expected loss is a usable number, not a rounding artefact', () => {
+  // The audit trail records expectedLoss alongside the rescue we paid for.
+  // A horizon short enough to zero it out makes that record incoherent.
+  const critical = expectedLiquidationLoss(position(1.04), 'CRITICAL');
+  assert.ok(
+    critical.probability > 0.2,
+    `HF 1.04 over a day should be alarming, got ${critical.probability}`,
+  );
+  assert.ok(critical.expectedLoss > 1, 'expected loss must survive rounding to cents');
+});
+
+test('risk is monotonic across tiers at a fixed horizon', () => {
+  const probs = [1.25, 1.12, 1.04].map(
+    (hf) => liquidationProbability(hf, 0.04, 24),
+  );
+  for (let i = 1; i < probs.length; i++) {
+    assert.ok(probs[i]! > probs[i - 1]!, `not monotonic: ${probs.join(',')}`);
+  }
+});
