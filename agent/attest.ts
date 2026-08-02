@@ -21,6 +21,11 @@ export const GUARDIAN_LOG_ABI = [
 
 const iface = new Interface(GUARDIAN_LOG_ABI);
 
+/** JSON ABI form, which is what the REST execute endpoint expects. */
+export const GUARDIAN_LOG_ABI_JSON = JSON.parse(
+  iface.formatJson(),
+) as unknown[];
+
 const MAINNET_CHAIN_ID = 1;
 const ZERO_HASH = `0x${'0'.repeat(64)}`;
 
@@ -43,14 +48,15 @@ function toFixedPoint(value: number, decimals: number): bigint {
   return BigInt(Math.round(value * 10 ** decimals));
 }
 
-export function encodeAttestation(
+/** Arguments for GuardianLog.attest, in ABI order. */
+export function attestationArgs(
   decision: Decision,
   watchedWallet: string,
   healthFactor: number,
   gasPriceGwei: number,
   remediationTxHash: string = ZERO_HASH,
-): string {
-  return iface.encodeFunctionData('attest', [
+): unknown[] {
+  return [
     watchedWallet,
     actionCode(decision),
     // HF can be Infinity when there is no debt; clamp so encoding cannot throw.
@@ -59,7 +65,21 @@ export function encodeAttestation(
     toFixedPoint(decision.rescueCostUsd, 8),
     BigInt(Math.round(gasPriceGwei)),
     remediationTxHash,
-  ]);
+  ];
+}
+
+/** ABI-encoded calldata, for the naive baseline and for tests. */
+export function encodeAttestation(
+  decision: Decision,
+  watchedWallet: string,
+  healthFactor: number,
+  gasPriceGwei: number,
+  remediationTxHash: string = ZERO_HASH,
+): string {
+  return iface.encodeFunctionData(
+    'attest',
+    attestationArgs(decision, watchedWallet, healthFactor, gasPriceGwei, remediationTxHash),
+  );
 }
 
 export async function attestDecision(
@@ -75,12 +95,16 @@ export async function attestDecision(
     label: `attest:${decision.action}`,
     chainId: MAINNET_CHAIN_ID,
     to: guardianLogAddress,
-    data: encodeAttestation(
+    functionName: 'attest',
+    functionArgs: attestationArgs(
       decision,
       watchedWallet,
       healthFactor,
       gasPriceGwei,
       remediationTxHash,
     ),
+    abi: [...GUARDIAN_LOG_ABI_JSON],
+    // Same decision must never attest twice if the agent restarts mid-write.
+    idempotencyKey: `attest-${watchedWallet}-${decision.action}-${remediationTxHash ?? 'hold'}`,
   });
 }

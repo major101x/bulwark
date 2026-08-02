@@ -17,7 +17,6 @@
  * executions went through the MCP tools. See `TO VERIFY` markers.
  */
 
-import type { KeeperHubExecutionStatus } from './keeperhub-types.ts';
 import type { GasPolicy } from './risk.ts';
 
 export interface ExecutionRequest {
@@ -25,8 +24,12 @@ export interface ExecutionRequest {
   label: string;
   chainId: number;
   to: string;
-  /** ABI-encoded calldata. */
-  data: string;
+  /** Solidity function to call. */
+  functionName: string;
+  /** Arguments, in the order the ABI declares them. */
+  functionArgs?: unknown[];
+  /** ABI fragment array. Omitted for verified contracts, which auto-resolve. */
+  abi?: unknown[];
   /** Native value in wei. Usually zero; we move ERC20s. */
   value?: bigint;
   gasPolicy?: GasPolicy;
@@ -50,14 +53,21 @@ export interface ExecutionResult {
   effectiveGasPriceGwei?: number;
   /** Populated when ok is false. */
   error?: string;
+  /** KeeperHub execution id, for cross-referencing the audit trail. */
+  executionId?: string;
   /** Set when the transaction never mined within the deadline. */
   stuck?: boolean;
   /** Whether KeeperHub covered the gas. Observed true on Sepolia as well. */
   sponsored?: boolean;
+  /**
+   * The call was refused before submission, typically by simulation. Distinct
+   * from a failure: nothing was broadcast and no gas was burned.
+   */
+  prevented?: boolean;
 }
 
 export interface ExecutionBackend {
-  readonly name: 'keeperhub' | 'naive';
+  readonly name: 'keeperhub' | 'naive' | 'naive-blind';
   execute(req: ExecutionRequest): Promise<ExecutionResult>;
 }
 
@@ -68,123 +78,179 @@ export interface KeeperHubConfig {
   apiUrl: string;
 }
 
+/** Sepolia and mainnet both target ~12s blocks. */
+const ONE_BLOCK_MS = 12_000;
+
 export class KeeperHubBackend implements ExecutionBackend {
   readonly name = 'keeperhub' as const;
 
   constructor(private readonly config: KeeperHubConfig) {}
 
-  private async request<T>(path: string, body: unknown): Promise<T> {
+  /**
+   * Retry transient transport failures only.
+   *
+   * `fetch failed` is a connection-level error, not an answer from the API, and
+   * treating it as a KeeperHub failure would put network flakiness on
+   * KeeperHub's side of the scorecard. Anything that got an HTTP response is
+   * left alone, since retrying a real rejection would be measuring nothing.
+   */
+  private async withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+    let last: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        last = err;
+        const transport = /fetch failed|ECONNRESET|ETIMEDOUT|socket hang up/i.test(
+          err instanceof Error ? err.message : String(err),
+        );
+        if (!transport) throw err;
+        await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+    throw last;
+  }
+
+  /**
+   * REST transport. Paths and field casing verified against a live account on
+   * 2026-08-02 by probing; they are NOT what the docs implied.
+   *
+   *   POST /api/execute/:actionType     e.g. /api/execute/contract-call
+   *   POST /api/workflows/:id/execute
+   *   GET  /api/workflows/:id/executions
+   *
+   * Note there is no `v1` segment, the body is camelCase (the MCP tool takes
+   * snake_case for the same fields), and `functionArgs` and `abi` must be JSON
+   * *strings* rather than JSON values.
+   */
+  private async request<T>(path: string, body?: unknown, method = 'POST'): Promise<T> {
     const res = await fetch(`${this.config.apiUrl}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${this.config.apiKey}`,
       },
-      body: JSON.stringify(body),
+      // bigint is the natural type for token amounts but JSON.stringify throws
+      // on it, so encode as decimal strings, which is what the API wants.
+      body:
+        body === undefined
+          ? undefined
+          : JSON.stringify(body, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)),
     });
+    const text = await res.text();
     if (!res.ok) {
-      throw new Error(`KeeperHub ${path} -> ${res.status} ${await res.text()}`);
+      throw new Error(`KeeperHub ${method} ${path} -> ${res.status} ${text}`);
     }
-    return (await res.json()) as T;
+    return JSON.parse(text) as T;
   }
 
   /**
-   * Run a workflow built in the visual editor and wait for it to settle.
-   * Used for the rescue paths, which are multi-step (approve, act, re-read the
-   * health factor, branch on whether the fix actually worked).
+   * Run a workflow and wait for it to settle. Workflow executions are the only
+   * path that exposes transaction hashes and gas over REST, via the executions
+   * listing, so anything needing a receipt goes through here.
    */
   async runWorkflow(
     workflowId: string,
-    inputs: Record<string, unknown>,
+    inputs: Record<string, unknown> = {},
   ): Promise<ExecutionResult> {
     const started = Date.now();
-    // TO VERIFY: path and payload shape.
     const { executionId } = await this.request<{ executionId: string }>(
-      '/api/v1/workflows/execute',
-      { workflowId, inputs },
+      `/api/workflows/${workflowId}/execute`,
+      { input: inputs },
     );
-    return this.poll(executionId, started);
+    return this.pollWorkflow(workflowId, executionId, started);
   }
 
   /**
-   * Direct contract call, for single-step actions like a mainnet attestation.
+   * Direct contract call.
+   *
+   * The POST blocks until the execution reaches a terminal state and returns
+   * only `{ executionId, status }`. There is no REST route for direct-execution
+   * detail (the MCP server has `get_direct_execution_status`, but nothing
+   * equivalent is reachable over HTTP), so gas and transaction hash are simply
+   * not available on this path. We report them as undefined rather than
+   * guessing, and the chaos scorecard marks the cell unavailable instead of
+   * printing a zero that would read as "no gas wasted".
    */
   async execute(req: ExecutionRequest): Promise<ExecutionResult> {
     const started = Date.now();
-    // TO VERIFY: path and payload shape.
-    const { executionId } = await this.request<{ executionId: string }>(
-      '/api/v1/execute/contract-call',
-      {
-        chainId: req.chainId,
-        to: req.to,
-        data: req.data,
-        value: (req.value ?? 0n).toString(),
-        idempotencyKey: req.idempotencyKey,
-        gas: req.gasPolicy
-          ? {
-              multipliers: req.gasPolicy.multipliers,
-              blocksBetweenBumps: req.gasPolicy.blocksBetweenBumps,
-              privateRouting: req.gasPolicy.privateRouting,
-              // KeeperHub exposes an explicit tip that bypasses its default
-              // priority-fee clamp, which is what the CRITICAL ladder needs.
-              priorityFeeGwei: req.gasPolicy.multipliers.at(-1),
-            }
-          : undefined,
-      },
-    );
-    return this.poll(executionId, started);
+    try {
+      const res = await this.withRetry(() =>
+        this.request<{ executionId: string; status: string }>(
+        '/api/execute/contract-call',
+        {
+          contractAddress: req.to,
+          chainId: String(req.chainId),
+          functionName: req.functionName,
+          functionArgs: JSON.stringify(req.functionArgs ?? [], (_k, v) =>
+            typeof v === 'bigint' ? v.toString() : v,
+          ),
+          abi: req.abi === undefined ? undefined : JSON.stringify(req.abi),
+          idempotencyKey: req.idempotencyKey,
+          ...(req.gasPolicy?.multipliers.at(-1) !== undefined
+            ? { priorityFeeGwei: String(req.gasPolicy.multipliers.at(-1)) }
+            : {}),
+        },
+        ),
+      );
+      const latencyMs = Date.now() - started;
+      const ok = res.status === 'completed';
+      return {
+        ok,
+        latencyMs,
+        bumps: 0,
+        executionId: res.executionId,
+        // A failure returned faster than one block cannot have been mined, so
+        // nothing was broadcast and no gas was burned: KeeperHub refused it at
+        // simulation. This is an inference from latency, not a field the API
+        // returns, because there is no REST route for execution detail. It is
+        // labelled as inferred wherever it is reported.
+        prevented: !ok && latencyMs < ONE_BLOCK_MS,
+        error: ok ? undefined : res.status,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        ok: false,
+        latencyMs: Date.now() - started,
+        bumps: 0,
+        // A pre-flight rejection is KeeperHub refusing to submit a call it
+        // knows will fail. That is a success for reliability purposes even
+        // though the request errored, so the harness counts it separately.
+        prevented: /revert|simulat|estimate/i.test(message),
+        error: message,
+      };
+    }
   }
 
-  /** Poll until the execution reaches a terminal state or we give up. */
-  private async poll(
+  /** Poll a workflow execution through the executions listing. */
+  private async pollWorkflow(
+    workflowId: string,
     executionId: string,
     startedAt: number,
     timeoutMs = 5 * 60_000,
   ): Promise<ExecutionResult> {
     while (Date.now() - startedAt < timeoutMs) {
-      // TO VERIFY: REST path. Confirmed via the MCP tool
-      // `get_direct_execution_status`, whose response this parses.
-      const status = await this.request<KeeperHubExecutionStatus>(
-        '/api/v1/executions/get',
-        { executionId },
+      const list = await this.request<WorkflowExecutionSummary[]>(
+        `/api/workflows/${workflowId}/executions`,
+        undefined,
+        'GET',
       );
+      const run = list.find((e) => e.id === executionId);
 
-      // KeeperHub counts its own resubmissions, so we report its number rather
-      // than guessing from elapsed time.
-      const bumps = status.retryCount ?? 0;
-
-      if (status.status === 'completed') {
-        // `status: completed` only means the execution finished, not that the
-        // transaction succeeded. A reverted call completes too, so the inner
-        // success flag is the one that decides.
-        const ok = status.result?.success === true && !status.result?.executedCall?.reverted;
+      if (run && run.status !== 'running' && run.status !== 'pending') {
+        const hashes = run.transactionHashes ?? [];
         return {
-          ok,
-          txHash: status.transactionHash ?? status.result?.transactionHash,
+          ok: run.status === 'success',
+          txHash: hashes.at(-1)?.hash,
           latencyMs: Date.now() - startedAt,
-          bumps,
-          gasUsed: status.result?.gasUsed ? BigInt(status.result.gasUsed) : undefined,
-          effectiveGasPriceGwei: status.result?.effectiveGasPrice
-            ? Number(status.result.effectiveGasPrice) / 1e9
-            : undefined,
-          sponsored: status.result?.sponsored,
-          error: ok ? undefined : (status.error ?? 'reverted'),
+          bumps: 0,
+          gasUsed: run.gasUsedWei ? BigInt(run.gasUsedWei) : undefined,
+          error: run.status === 'success' ? undefined : (run.error ?? run.status),
         };
       }
-
-      if (status.status === 'failed') {
-        return {
-          ok: false,
-          txHash: status.transactionHash,
-          latencyMs: Date.now() - startedAt,
-          bumps,
-          error: status.error ?? 'execution failed',
-        };
-      }
-
       await new Promise((r) => setTimeout(r, 2000));
     }
-
     return {
       ok: false,
       latencyMs: Date.now() - startedAt,
@@ -193,6 +259,14 @@ export class KeeperHubBackend implements ExecutionBackend {
       error: 'timed out waiting for inclusion',
     };
   }
+}
+
+interface WorkflowExecutionSummary {
+  id: string;
+  status: string;
+  error: string | null;
+  gasUsedWei: string | null;
+  transactionHashes?: Array<{ hash: string; nodeId: string; nodeName: string }>;
 }
 
 // --- Naive baseline --------------------------------------------------------
@@ -204,7 +278,9 @@ export class KeeperHubBackend implements ExecutionBackend {
  * artificially competent would flatter our own numbers.
  */
 export class NaiveBackend implements ExecutionBackend {
-  readonly name = 'naive' as const;
+  get name(): 'naive' | 'naive-blind' {
+    return this.label;
+  }
 
   constructor(
     private readonly rpcUrl: string,
@@ -212,20 +288,40 @@ export class NaiveBackend implements ExecutionBackend {
     /** Fixed gas price in gwei. Never adjusted, which is the whole point. */
     private readonly staticGasGwei = 10,
     private readonly deadlineMs = 5 * 60_000,
+    /**
+     * When set, the transaction carries this gas limit and ethers skips
+     * `estimateGas` entirely.
+     *
+     * This matters more than it looks. ethers estimates by default, and that
+     * estimate reverts before anything is broadcast, so a plain ethers agent is
+     * already protected against doomed calls. Agents defeat that protection on
+     * purpose: hardcoding a limit saves an RPC round trip and stops estimation
+     * failures from blocking sends. That is when reverts start costing real gas.
+     */
+    private readonly fixedGasLimit?: bigint,
+    private readonly label: 'naive' | 'naive-blind' = 'naive',
   ) {}
 
   async execute(req: ExecutionRequest): Promise<ExecutionResult> {
     const started = Date.now();
-    const { JsonRpcProvider, Wallet, parseUnits } = await import('ethers');
+    const { Interface, JsonRpcProvider, Wallet, parseUnits } = await import('ethers');
     const provider = new JsonRpcProvider(this.rpcUrl);
     const wallet = new Wallet(this.privateKey, provider);
 
     try {
+      // The naive path encodes calldata itself and submits it blind: no
+      // simulation, so a call that will revert is broadcast anyway and burns
+      // gas. That is the behaviour under measurement, not an oversight.
+      const data = new Interface(
+        (req.abi ?? []) as never,
+      ).encodeFunctionData(req.functionName, req.functionArgs ?? []);
+
       const sent = await wallet.sendTransaction({
         to: req.to,
-        data: req.data,
+        data,
         value: req.value ?? 0n,
         gasPrice: parseUnits(String(this.staticGasGwei), 'gwei'),
+        ...(this.fixedGasLimit === undefined ? {} : { gasLimit: this.fixedGasLimit }),
       });
 
       const receipt = await Promise.race([
@@ -254,11 +350,15 @@ export class NaiveBackend implements ExecutionBackend {
         error: receipt.status === 1 ? undefined : 'reverted',
       };
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       return {
         ok: false,
         latencyMs: Date.now() - started,
         bumps: 0,
-        error: err instanceof Error ? err.message : String(err),
+        // ethers refusing to send after a failed estimate is the same class of
+        // save as a server-side simulation: nothing was broadcast.
+        prevented: /estimateGas|CALL_EXCEPTION|UNPREDICTABLE_GAS/i.test(message),
+        error: message,
       };
     }
   }
