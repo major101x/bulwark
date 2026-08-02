@@ -12,6 +12,10 @@ import type { ExecutionRequest } from '../agent/executor.ts';
 
 export interface Scenario {
   name: string;
+  /** False when the scenario cannot run against the current setup. */
+  runnable?: boolean;
+  /** Why it cannot run. Printed so skipped coverage is never silent. */
+  skipReason?: string;
   /** What real-world failure this stands in for. */
   description: string;
   /** What we expect KeeperHub to do about it. */
@@ -30,10 +34,14 @@ export const SCENARIOS: Scenario[] = [
     mutate: (base) => ({
       ...base,
       label: `${base.label}:underpriced`,
-      gasPolicy: base.gasPolicy && {
-        ...base.gasPolicy,
-        // Bid deliberately under the market.
+      // The naive backend is already pinned to a static gas price below market;
+      // this asks KeeperHub for the same underbid so both are given the same
+      // bad instruction and we see which one still lands.
+      gasPolicy: {
         multipliers: [0.6],
+        blocksBetweenBumps: 2,
+        privateRouting: false,
+        maxCostUsd: 5,
       },
     }),
   },
@@ -50,6 +58,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     name: 'nonce-collision',
+    runnable: false,
+    skipReason: 'neither backend exposes an explicit nonce to collide',
     description:
       'Two transactions claim the same nonce. One is silently dropped, and the ' +
       'agent believes both succeeded.',
@@ -68,12 +78,16 @@ export const SCENARIOS: Scenario[] = [
     mutate: (base) => ({
       ...base,
       label: `${base.label}:will-revert`,
-      // TODO(day-7): encode a repay for (debt + 1) against the Sepolia pool.
-      data: base.data,
+      // Transfer far more LINK than the wallet holds. Reverts on chain, and a
+      // simulating backend should refuse to submit it at all.
+      functionName: 'transfer',
+      functionArgs: ['0x000000000000000000000000000000000000dEaD', 10n ** 30n],
     }),
   },
   {
     name: 'rpc-flakiness',
+    runnable: false,
+    skipReason: 'needs a proxy that can drop connections mid-submit',
     description:
       'The RPC endpoint rate-limits or drops mid-submission, so the agent never ' +
       'learns whether its transaction was accepted.',
@@ -82,6 +96,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     name: 'cold-start',
+    runnable: false,
+    skipReason: 'needs a freshly funded wallet per trial',
     description:
       'A wallet that has never transacted. Nonce starts at zero and several ' +
       'clients mishandle the first submission.',
