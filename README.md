@@ -76,33 +76,52 @@ an audit trail, and the declined rescues are the interesting judgment calls.
 
 ## Status
 
-**Autonomous liquidation defense is live.** A KeeperHub workflow watches the
-position every 50 Sepolia blocks and rescues it without any local process running.
+**Autonomous liquidation defense is live, and every decision is attested to Ethereum mainnet.**
 
-Verified both branches on 2026-08-02:
+A KeeperHub workflow watches the position every 50 Sepolia blocks and rescues it
+with no local process running. Verified both branches on 2026-08-02:
 
 | Health factor | Condition | Outcome |
 |---|---|---|
 | 1.3004 healthy | false | stopped after 3 nodes, zero transactions |
 | 1.0400 critical | true | rescued to **1.3192** in 26.5s |
 
-Rescue transactions, both gas sponsored by KeeperHub:
-[approve](https://sepolia.etherscan.io/tx/0xfc3555ad6cdd0d6db25bf33a33082438b7f74955f028a7b666a69a5b451e4cfa) ·
-[supply](https://sepolia.etherscan.io/tx/0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d)
+### Onchain, all gas sponsored, all zero capital
+
+| What | Chain | Link |
+|---|---|---|
+| `GuardianLog` deployment | mainnet | [`0x62938be3...`](https://etherscan.io/tx/0x62938be3d006d6a0757c827f3f463f0ea9043f8defb521e7d456b4287636ef7d) |
+| `GuardianLog` contract | mainnet | [`0x06D8C09B...`](https://etherscan.io/address/0x06D8C09B5dbb9f9Bb96B7B20a351cdC5e16644D3) |
+| Decision attestation | mainnet | [`0x2d60efde...`](https://etherscan.io/tx/0x2d60efde2ceb3f14cbe150e59fb992aaa588738e3816f33f7b29c38cddcf48c9) |
+| Rescue: approve | Sepolia | [`0xfc3555ad...`](https://sepolia.etherscan.io/tx/0xfc3555ad6cdd0d6db25bf33a33082438b7f74955f028a7b666a69a5b451e4cfa) |
+| Rescue: supply | Sepolia | [`0xc89edff9...`](https://sepolia.etherscan.io/tx/0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d) |
+
+The mainnet attestation carries the Sepolia rescue's hash in
+`remediationTxHash`, so the public record and the economic action are linked.
+Decoded, it reads: HF 1.0400, action AddCollateral, expected loss $4.74, rescue
+cost $1.18.
+
+KeeperHub has no deploy action, so `GuardianLog` went up through a CREATE3
+factory, whose `deploy(bytes32,bytes)` is an ordinary call and therefore
+reachable. The address was predicted before deploying and the on-chain runtime
+code verified byte-identical to the local compile.
 
 | Component | State |
 |---|---|
-| Risk tiers, probability model, cost/benefit | done, 44 tests passing |
+| Risk tiers, probability model, cost/benefit | done, 46 tests passing |
 | Remediation selection and amount math | done, verified against the live position |
 | Position tooling (`pos:*` scripts) | done: open, fund, danger, status, evaluate |
-| `hf-watch-critical` workflow | **done, enabled, both branches verified** |
+| `hf-watch-critical` workflow | done, enabled, both branches verified |
+| `GuardianLog` on mainnet | **deployed, first attestation written** |
 | KeeperHub response shapes | verified from real executions (`agent/keeperhub-types.ts`) |
 | KeeperHub REST paths | unconfirmed; verified calls went through MCP |
 | ARMED-tier agent loop | decision logic done, not yet wired to a trigger |
-| `GuardianLog.sol` | written, not yet deployed |
+| Attestation from the agent | done by hand via MCP; not yet automatic |
 | Chaos harness | scored and tested; backends not yet wired to live chains |
 | Marketplace listing / x402 | not started, and settlement is mainnet-only |
 | Dashboard | not started |
+
+Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
 ### How the work is split
 
@@ -121,7 +140,7 @@ Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
 ```bash
 npm install
-npm test          # 44 tests, no network required
+npm test          # 46 tests, no network required
 npm run typecheck
 ```
 
