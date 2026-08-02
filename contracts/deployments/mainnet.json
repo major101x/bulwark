@@ -1,0 +1,40 @@
+{
+  "_comment": [
+    "GuardianLog on Ethereum mainnet. Deployed with zero capital: KeeperHub",
+    "sponsored the gas, and the contract is storage-free so an attestation",
+    "costs only the base transaction plus log data.",
+    "",
+    "KeeperHub has no deploy action, so deployment went through ZeframLou's",
+    "CREATE3 factory, which exposes deploy(bytes32,bytes) as an ordinary",
+    "function call and is therefore reachable via execute_contract_call.",
+    "The resulting address is deterministic from (deployer, salt) and was",
+    "predicted with getDeployed() before deploying.",
+    "",
+    "Verified after deployment: on-chain runtime bytecode is byte-identical to",
+    "the local compile (824 bytes)."
+  ],
+  "chainId": 1,
+  "address": "0x06D8C09B5dbb9f9Bb96B7B20a351cdC5e16644D3",
+  "deployTx": "0x62938be3d006d6a0757c827f3f463f0ea9043f8defb521e7d456b4287636ef7d",
+  "deployer": "0x2Ac0C346502571c8Ef320e2768702589800b14F8",
+  "create3Factory": "0x9fBB3DF7C40Da2e5A0dE984fFE2CCB7C47cd0ABf",
+  "salt": "0x5d9ba1ce39a08086c97d758c09bf2a1b4d2165c7ef0621a6f5568489cbe698e1",
+  "saltPreimage": "gasguard.guardianlog.v1",
+  "solcVersion": "0.8.35",
+  "runtimeBytecodeBytes": 824,
+  "attestSelector": "0x893205fa",
+  "decisionEventTopic": "0x134cc2553c9ffcbbf3d5b97124fb2d4591c723f5629bf049505200a28a7cd2bb",
+  "firstAttestation": {
+    "tx": "0x2d60efde2ceb3f14cbe150e59fb992aaa588738e3816f33f7b29c38cddcf48c9",
+    "block": 25667081,
+    "decodes": {
+      "agent": "0x2Ac0C346502571c8Ef320e2768702589800b14F8",
+      "watchedWallet": "0x5Fd5a59693CFC88CC65692751bE547a3fc66992b",
+      "action": "2 (AddCollateral)",
+      "healthFactor": "1.0400",
+      "expectedLossUsd": "4.74",
+      "rescueCostUsd": "1.18",
+      "remediationTxHash": "0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d"
+    }
+  }
+}

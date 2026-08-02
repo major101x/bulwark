@@ -6,3 +6,5 @@ dist/
 chaos/runs/
 revenue.json
 wallet.json
+out/
+cache/
