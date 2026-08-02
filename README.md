@@ -76,24 +76,41 @@ an audit trail, and the declined rescues are the interesting judgment calls.
 
 ## Status
 
+**First rescue executed through KeeperHub on 2026-08-02.** A live Aave position on
+Sepolia was driven to HF 1.047 (CRITICAL), the agent chose to add collateral, and
+the position recovered to HF 1.300.
+
+| | Before | After |
+|---|---|---|
+| Health factor | 1.0474 CRITICAL | **1.3003** IDLE |
+| Collateral | $787.73 | $977.94 |
+
+- approve: [`0xa6041117...`](https://sepolia.etherscan.io/tx/0xa6041117ac9d6ea52c4f52075cae603e0b75e06ec56bb0a03a341a601649599b)
+- supply (the rescue): [`0xacf47d3f...`](https://sepolia.etherscan.io/tx/0xacf47d3fe4f491226b7ad24fcf845aecea7ca1927fbd4118970eb5de3f4ab0ac)
+
+Both gas sponsored by KeeperHub, on Sepolia.
+
 | Component | State |
 |---|---|
-| Risk tiers, probability model, cost/benefit | ✅ implemented, 43 tests passing |
-| Remediation selection and amount math | ✅ implemented and tested |
-| `GuardianLog.sol` | ✅ written, not yet deployed |
-| KeeperHub REST client | ⚠️ written from docs, **request/response shapes unverified** |
-| KeeperHub workflows | ⛔ not built yet (SPEC.md §5) |
-| Chaos harness | 🚧 scored and tested; backends not yet wired to live chains |
-| Marketplace listing / x402 | ⛔ not started |
-| Dashboard | ⛔ not started |
+| Risk tiers, probability model, cost/benefit | done, 44 tests passing |
+| Remediation selection and amount math | done, verified against the live position |
+| Position tooling (`pos:*` scripts) | done: open, fund, danger, status, evaluate |
+| Rescue execution through KeeperHub | **done, one-shot via MCP** |
+| KeeperHub response shapes | verified from real executions (`agent/keeperhub-types.ts`) |
+| KeeperHub REST paths | still unconfirmed; verified calls went through MCP |
+| `GuardianLog.sol` | written, not yet deployed |
+| KeeperHub workflows (`hf-watch` etc.) | not built yet, rescue is currently manual |
+| Chaos harness | scored and tested; backends not yet wired to live chains |
+| Marketplace listing / x402 | not started, and settlement is mainnet-only |
+| Dashboard | not started |
 
-Every unverified assumption is tracked in [SPEC.md §14](./SPEC.md) with a fallback.
+Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
 ## Running what exists
 
 ```bash
 npm install
-npm test          # 43 tests, no network required
+npm test          # 44 tests, no network required
 npm run typecheck
 ```
 
