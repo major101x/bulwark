@@ -150,4 +150,68 @@ query was too specific" should not look identical to "not supported".
 
 ---
 
+### 2026-08-02 web3/* actions are discoverable but not directly executable
+
+**Doing:** Approving LINK to the Aave pool so the keeper could supply collateral.
+**Expected:** `web3/approve-token` is listed by `list_action_schemas` with a full
+parameter spec, so calling it via `execute_protocol_action` should work.
+**Got:** `501 Not Implemented: Direct execution not supported for
+"web3/approve-token". Use workflow execution instead.` The hint is good and the
+workaround (`execute_contract_call`) is fine, but nothing in the schema listing
+distinguishes actions that can be executed directly from those that cannot.
+**Cost:** ~10 minutes.
+**Fix:** Add a `directExecution: true|false` flag to the action schema output.
+Agents choose tools by reading that listing, and there is currently no way to
+know which half of it is callable without trying.
+
+---
+
+### 2026-08-02 aave-v3 amounts are in base units, but only aave-v4 says so
+
+**Doing:** Supplying 6.34 LINK as collateral.
+**Expected:** Human units, since `web3/approve-token` documents its amount as
+"100.50 or max".
+**Got:** `invalid BigNumberish string: Cannot convert 6.34 to a BigInt`. The
+aave-v3 actions take smallest units. The aave-v4 descriptions state this
+explicitly ("wei for 18-decimal tokens"); the v3 ones do not, and the adjacent
+web3 action uses the opposite convention.
+**Cost:** ~10 minutes, and it fails loudly, which is lucky. Passing a human
+amount where base units are expected would silently supply dust if the string
+happened to parse.
+**Fix:** State the unit in every amount field description, and ideally use one
+convention across web3 and protocol actions. Mixed conventions inside one tool
+surface are a foot-gun for agents, which cannot see the inconsistency.
+
+---
+
+### 2026-08-02 referralCode is required but advertised as optional
+
+**Doing:** Calling `aave-v3/supply`.
+**Expected:** Omitting an optional field is fine.
+**Got:** `Invalid function arguments: referralCode: uint16 is missing`.
+`search_protocol_actions` lists `referralCode` under `optionalFields`, but the
+ABI encoder requires it. The same likely applies to `interestRateMode` on
+borrow and repay.
+**Cost:** ~5 minutes.
+**Fix:** Either default it to 0 server-side, or move it to `requiredFields`.
+An agent that trusts the schema will fail its first write.
+
+---
+
+### 2026-08-02 Sepolia executions are gas sponsored, which the docs do not mention
+
+**Doing:** Budgeting Sepolia ETH for the keeper wallet.
+**Expected:** Sponsorship on mainnet only, per the hackathon brief and Discord.
+**Got:** Both executions returned `sponsored: true` on Sepolia, and the keeper
+wallet's ETH balance did not move. Also learned the wallet is an EIP-7702
+delegated EOA: calls route through an executor contract, but `msg.sender`
+remains the wallet, so allowances and balances behave normally.
+**Cost:** None, a pleasant surprise, but we funded the keeper with testnet ETH
+that turned out to be unnecessary.
+**Fix:** Say which networks are sponsored on the wallet page. This is a nice
+feature that is currently invisible, and it removes a whole faucet step from
+onboarding.
+
+---
+
 <!-- Add entries below as they happen. Do not batch them up. -->
