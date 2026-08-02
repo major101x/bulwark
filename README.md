@@ -76,33 +76,44 @@ an audit trail, and the declined rescues are the interesting judgment calls.
 
 ## Status
 
-**First rescue executed through KeeperHub on 2026-08-02.** A live Aave position on
-Sepolia was driven to HF 1.047 (CRITICAL), the agent chose to add collateral, and
-the position recovered to HF 1.300.
+**Autonomous liquidation defense is live.** A KeeperHub workflow watches the
+position every 50 Sepolia blocks and rescues it without any local process running.
 
-| | Before | After |
+Verified both branches on 2026-08-02:
+
+| Health factor | Condition | Outcome |
 |---|---|---|
-| Health factor | 1.0474 CRITICAL | **1.3003** IDLE |
-| Collateral | $787.73 | $977.94 |
+| 1.3004 healthy | false | stopped after 3 nodes, zero transactions |
+| 1.0400 critical | true | rescued to **1.3192** in 26.5s |
 
-- approve: [`0xa6041117...`](https://sepolia.etherscan.io/tx/0xa6041117ac9d6ea52c4f52075cae603e0b75e06ec56bb0a03a341a601649599b)
-- supply (the rescue): [`0xacf47d3f...`](https://sepolia.etherscan.io/tx/0xacf47d3fe4f491226b7ad24fcf845aecea7ca1927fbd4118970eb5de3f4ab0ac)
-
-Both gas sponsored by KeeperHub, on Sepolia.
+Rescue transactions, both gas sponsored by KeeperHub:
+[approve](https://sepolia.etherscan.io/tx/0xfc3555ad6cdd0d6db25bf33a33082438b7f74955f028a7b666a69a5b451e4cfa) ·
+[supply](https://sepolia.etherscan.io/tx/0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d)
 
 | Component | State |
 |---|---|
 | Risk tiers, probability model, cost/benefit | done, 44 tests passing |
 | Remediation selection and amount math | done, verified against the live position |
 | Position tooling (`pos:*` scripts) | done: open, fund, danger, status, evaluate |
-| Rescue execution through KeeperHub | **done, one-shot via MCP** |
+| `hf-watch-critical` workflow | **done, enabled, both branches verified** |
 | KeeperHub response shapes | verified from real executions (`agent/keeperhub-types.ts`) |
-| KeeperHub REST paths | still unconfirmed; verified calls went through MCP |
+| KeeperHub REST paths | unconfirmed; verified calls went through MCP |
+| ARMED-tier agent loop | decision logic done, not yet wired to a trigger |
 | `GuardianLog.sol` | written, not yet deployed |
-| KeeperHub workflows (`hf-watch` etc.) | not built yet, rescue is currently manual |
 | Chaos harness | scored and tested; backends not yet wired to live chains |
 | Marketplace listing / x402 | not started, and settlement is mainnet-only |
 | Dashboard | not started |
+
+### How the work is split
+
+The CRITICAL tier runs **inside KeeperHub**, server-side, with a fixed-size
+collateral top-up. It needs no local process, so the position stays defended even
+when our agent is down. Economics are deliberately bypassed there: at HF 1.05 a
+passing gas spike is not a reason to let a position liquidate.
+
+The **agent** owns the ARMED tier, where the interesting behaviour is declining to
+act. That reasoning is too involved for condition nodes and it is where the
+cost/benefit model earns its place.
 
 Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
