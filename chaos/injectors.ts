@@ -16,6 +16,12 @@ export interface Scenario {
   runnable?: boolean;
   /** Why it cannot run. Printed so skipped coverage is never silent. */
   skipReason?: string;
+  /**
+   * Static gas price, in gwei, for the ethers baselines in this scenario.
+   * The baseline's price is fixed when it is constructed, so a scenario that
+   * wants to underprice has to say so here. Omitted means "stale but plausible".
+   */
+  baselineGasGwei?: number;
   /** What real-world failure this stands in for. */
   description: string;
   /** What we expect KeeperHub to do about it. */
@@ -27,6 +33,9 @@ export interface Scenario {
 export const SCENARIOS: Scenario[] = [
   {
     name: 'gas-underpricing',
+    // Well under the ~1 gwei Sepolia market, which is what a hardcoded price
+    // becomes the moment the network moves.
+    baselineGasGwei: 0.05,
     description:
       'Submit below the prevailing base fee, as any agent with a hardcoded gas ' +
       'price does the moment the network gets busy.',

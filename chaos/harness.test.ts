@@ -88,3 +88,14 @@ test('scorecard renders both backends under each scenario', () => {
   assert.match(table, /naive/);
   assert.match(table, /gas-underpricing/);
 });
+
+test('an RPC that merely fails to estimate is not counted as a save', () => {
+  // "missing revert data" means the node could not estimate, which happens on
+  // rate limits and outages. Crediting that as a prevented call would score an
+  // infrastructure failure as a reliability feature.
+  const card = score([
+    outcome({ ok: false, prevented: false, error: 'missing revert data (action="estimateGas")' }),
+  ]);
+  assert.equal(card.prevented, 0);
+  assert.equal(card.failed, 1);
+});

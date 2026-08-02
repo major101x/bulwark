@@ -228,16 +228,11 @@ async function main(): Promise<void> {
   const staticGwei = Number(process.env.CHAOS_STATIC_GAS_GWEI ?? '1.5');
   const deadline = Number(process.env.CHAOS_DEADLINE_MS ?? '90000');
 
-  const naive = new NaiveBackend(rpc, key, staticGwei, deadline);
-  // Same code path with estimation defeated by a hardcoded gas limit.
-  const naiveBlind = new NaiveBackend(
-    rpc,
-    key,
-    staticGwei,
-    deadline,
-    120_000n,
-    'naive-blind',
-  );
+  const baselines = (gwei: number) => [
+    new NaiveBackend(rpc, key, gwei, deadline),
+    // Same code path with estimation defeated by a hardcoded gas limit.
+    new NaiveBackend(rpc, key, gwei, deadline, 120_000n, 'naive-blind'),
+  ];
 
   const cards: Scorecard[] = [];
   const raw: TrialOutcome[] = [];
@@ -246,7 +241,10 @@ async function main(): Promise<void> {
     console.log(`\n## ${scenario.name}`);
     console.log(`   ${scenario.description}`);
     console.log(`   expect: ${scenario.expectedDefence}`);
-    for (const backend of [keeperhub, naive, naiveBlind]) {
+    for (const backend of [
+      keeperhub,
+      ...baselines(scenario.baselineGasGwei ?? staticGwei),
+    ]) {
       process.stdout.write(`   ${backend.name.padEnd(10)} `);
       const outcomes = await runScenario(backend, scenario, trials);
       raw.push(...outcomes);

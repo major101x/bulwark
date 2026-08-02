@@ -355,9 +355,14 @@ export class NaiveBackend implements ExecutionBackend {
         ok: false,
         latencyMs: Date.now() - started,
         bumps: 0,
-        // ethers refusing to send after a failed estimate is the same class of
-        // save as a server-side simulation: nothing was broadcast.
-        prevented: /estimateGas|CALL_EXCEPTION|UNPREDICTABLE_GAS/i.test(message),
+        // "Prevented" means the call was refused BECAUSE it would revert, which
+        // is the defence working. An estimateGas error on its own does not
+        // qualify: a rate-limited or unavailable RPC also fails to estimate,
+        // and counting that as a save would credit the baseline for an outage.
+        // Require evidence the node actually decoded a revert.
+        prevented:
+          /execution reverted|revert=|CALL_EXCEPTION/i.test(message) &&
+          !/missing revert data/i.test(message),
         error: message,
       };
     }
