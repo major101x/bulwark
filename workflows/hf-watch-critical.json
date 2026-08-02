@@ -1,0 +1,141 @@
+{
+  "_comment": [
+    "GasGuard: hf-watch-critical. Live workflow id x1q77bsw0oyhh0es77gla.",
+    "Autonomous liquidation defense, running entirely inside KeeperHub.",
+    "",
+    "Why the whole decision lives server-side rather than calling back into the",
+    "agent: KeeperHub's cloud cannot reach a local /evaluate endpoint without a",
+    "public tunnel. Putting the CRITICAL tier in the workflow is also strictly",
+    "better for reliability, because the position stays defended even when the",
+    "agent process is down. The agent keeps the richer ARMED-tier cost/benefit",
+    "reasoning, where declining to act is the interesting behaviour.",
+    "",
+    "Verified 2026-08-02:",
+    "  healthy guard  execution auxlrmur691dcqop4yi7y, HF 1.3004, condition false,",
+    "                 stopped after 3 nodes, zero transactions",
+    "  live rescue    execution wzr411cjk9lq1xf2b5etd, HF 1.0400 -> 1.3192 in 26.5s",
+    "                 approve 0xfc3555ad6cdd0d6db25bf33a33082438b7f74955f028a7b666a69a5b451e4cfa",
+    "                 supply  0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d",
+    "                 both gas sponsored, 243268 gas total"
+  ],
+  "name": "GasGuard: hf-watch-critical",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "position": { "x": 0, "y": 0 },
+      "data": {
+        "label": "Every 50 Blocks",
+        "type": "trigger",
+        "description": "50 blocks is ~10 minutes on Sepolia, about 144 runs/day, which keeps us inside the 5000/month free tier.",
+        "config": { "triggerType": "Block", "network": "11155111", "blockInterval": "50" },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "read-hf",
+      "type": "action",
+      "position": { "x": 250, "y": 0 },
+      "data": {
+        "label": "Read Health Factor",
+        "type": "action",
+        "description": "Aave reports healthFactor with 18 decimals. No debt returns uint256 max.",
+        "config": {
+          "actionType": "aave-v3/get-user-account-data",
+          "network": "11155111",
+          "user": "0x5Fd5a59693CFC88CC65692751bE547a3fc66992b"
+        },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "cond-critical",
+      "type": "action",
+      "position": { "x": 500, "y": 0 },
+      "data": {
+        "label": "Is Critical",
+        "type": "action",
+        "description": "HF below 1.05. A position with no debt returns uint256 max and is safely false.",
+        "config": {
+          "actionType": "Condition",
+          "condition": "{{@read-hf:Read Health Factor.result.healthFactor}} < 1050000000000000000",
+          "conditionConfig": {
+            "group": {
+              "id": "grp-critical-1",
+              "logic": "AND",
+              "rules": [
+                {
+                  "id": "rule-hf-below-105",
+                  "leftOperand": "{{@read-hf:Read Health Factor.result.healthFactor}}",
+                  "operator": "<",
+                  "rightOperand": "1050000000000000000"
+                }
+              ]
+            }
+          }
+        },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "approve-link",
+      "type": "action",
+      "position": { "x": 750, "y": -100 },
+      "data": {
+        "label": "Approve LINK",
+        "type": "action",
+        "description": "Refresh the pool allowance. Idempotent and cheap; without it the supply below reverts once the standing allowance is spent.",
+        "config": {
+          "actionType": "web3/approve-token",
+          "network": "11155111",
+          "tokenConfig": "{\"mode\":\"custom\",\"customToken\":{\"address\":\"0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5\",\"symbol\":\"LINK\"}}",
+          "spenderAddress": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+          "amount": "20"
+        },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "supply-link",
+      "type": "action",
+      "position": { "x": 1000, "y": -100 },
+      "data": {
+        "label": "Top Up Collateral",
+        "type": "action",
+        "description": "Fixed 7 LINK top-up, sized to lift the demo position from HF 1.04 back above the 1.30 target. Amount is in base units, not human units. onBehalfOf is the watched position, not the keeper.",
+        "config": {
+          "actionType": "aave-v3/supply",
+          "network": "11155111",
+          "asset": "0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5",
+          "amount": "7000000000000000000",
+          "onBehalfOf": "0x5Fd5a59693CFC88CC65692751bE547a3fc66992b",
+          "referralCode": "0"
+        },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "verify-hf",
+      "type": "action",
+      "position": { "x": 1250, "y": -100 },
+      "data": {
+        "label": "Verify Recovery",
+        "type": "action",
+        "description": "Re-read after the rescue. A rescue that executes but fails to clear the threshold is still a failure, and this puts the before/after pair in the audit trail.",
+        "config": {
+          "actionType": "aave-v3/get-user-account-data",
+          "network": "11155111",
+          "user": "0x5Fd5a59693CFC88CC65692751bE547a3fc66992b"
+        },
+        "status": "idle"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "read-hf" },
+    { "id": "e2", "source": "read-hf", "target": "cond-critical" },
+    { "id": "e3", "source": "cond-critical", "target": "approve-link", "sourceHandle": "true" },
+    { "id": "e4", "source": "approve-link", "target": "supply-link" },
+    { "id": "e5", "source": "supply-link", "target": "verify-hf" }
+  ]
+}
