@@ -214,4 +214,47 @@ onboarding.
 
 ---
 
+### 2026-08-02 Condition compares a string against a number, and the quoting is load-bearing
+
+**Doing:** Building the health-factor threshold check in a Condition node.
+**Expected:** A numeric comparison.
+**Got:** It works, but the execution log shows
+`resolvedExpression: "\"1300354189147293759\" < 1050000000000000000"`. The left
+operand stays a quoted string (contract reads return strings) while the right
+becomes a bare number literal, so JavaScript coerces numerically and the answer
+is right. That correctness depends entirely on the right operand being emitted
+unquoted. Had both sides been strings, the comparison would be lexicographic,
+and a health factor below 1.0 (18 digits) would compare as GREATER than a 19
+digit threshold, reporting a liquidatable position as safe. For a liquidation
+keeper that is the worst possible silent failure.
+**Cost:** ~15 minutes of reading the trace carefully instead of trusting a
+passing test.
+**Fix:** Coerce both operands explicitly when the rule operator is numeric
+(`<`, `<=`, `>`, `>=`), or surface the resolved types in the log. Contract reads
+return uint256 as strings, so numeric comparison against on-chain values is
+going to be extremely common, and right now it works by a quoting coincidence
+that is invisible unless you read `resolvedExpression`.
+
+**Bounty candidate:** yes. Silent wrong-branch evaluation on 18-decimal values
+would affect any threshold workflow over a token amount or health factor.
+
+---
+
+### 2026-08-02 get_execution includeData:false still returns the whole workflow
+
+**Doing:** Polling a running execution for node status.
+**Expected:** `includeData: false` to give the "compact status-only response"
+the tool description promises.
+**Got:** Node input/output blobs are stripped, but every response still embeds
+the complete workflow definition (all nodes, configs, edges) inside
+`logs.execution.workflow`. For a six-node workflow that is most of the payload,
+and it repeats on every poll.
+**Cost:** No lost time, but it makes polling expensive for an agent paying by
+the token, which is exactly who uses MCP.
+**Fix:** Have `includeData: false` omit `logs.execution.workflow` too, or add a
+`includeWorkflow` flag. The caller already knows the workflow, they just
+submitted it.
+
+---
+
 <!-- Add entries below as they happen. Do not batch them up. -->
