@@ -57,6 +57,19 @@ export interface ExecutionResult {
   executionId?: string;
   /** Set when the transaction never mined within the deadline. */
   stuck?: boolean;
+  /**
+   * The trial was abandoned at the harness deadline rather than resolving.
+   * The underlying call cannot be cancelled, so a transaction may still exist.
+   * Distinct from `stuck`, which is an observed non-inclusion.
+   */
+  abandoned?: boolean;
+  /**
+   * The trial failed for a reason on our side of the wire: a dropped
+   * connection, a rate-limited RPC, an endpoint that could not estimate. These
+   * measure the apparatus, not the subject, and are excluded from rates rather
+   * than charged to whichever backend happened to be running.
+   */
+  excluded?: boolean;
   /** Whether KeeperHub covered the gas. Observed true on Sepolia as well. */
   sponsored?: boolean;
   /**
@@ -77,6 +90,14 @@ export interface KeeperHubConfig {
   apiKey: string;
   apiUrl: string;
 }
+
+/** Errors that mean our side of the wire broke, not the backend under test. */
+export const TRANSPORT_FAILURE =
+  /fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|ENOTFOUND|EAI_AGAIN/i;
+
+/** RPC could not answer, as opposed to answering "this call reverts". */
+export const RPC_UNAVAILABLE =
+  /missing revert data|rate ?limit|too many requests|SERVER_ERROR|TIMEOUT/i;
 
 /** Sepolia and mainnet both target ~12s blocks. */
 const ONE_BLOCK_MS = 12_000;
@@ -214,10 +235,9 @@ export class KeeperHubBackend implements ExecutionBackend {
         ok: false,
         latencyMs: Date.now() - started,
         bumps: 0,
-        // A pre-flight rejection is KeeperHub refusing to submit a call it
-        // knows will fail. That is a success for reliability purposes even
-        // though the request errored, so the harness counts it separately.
-        prevented: /revert|simulat|estimate/i.test(message),
+        // Transport failures survive withRetry only when our own connectivity
+        // is down. Charging those to KeeperHub would measure our network.
+        excluded: TRANSPORT_FAILURE.test(message),
         error: message,
       };
     }
@@ -361,8 +381,9 @@ export class NaiveBackend implements ExecutionBackend {
         // and counting that as a save would credit the baseline for an outage.
         // Require evidence the node actually decoded a revert.
         prevented:
-          /execution reverted|revert=|CALL_EXCEPTION/i.test(message) &&
-          !/missing revert data/i.test(message),
+          /execution reverted|revert=/i.test(message) &&
+          !RPC_UNAVAILABLE.test(message),
+        excluded: TRANSPORT_FAILURE.test(message) || RPC_UNAVAILABLE.test(message),
         error: message,
       };
     }

@@ -8,37 +8,45 @@ Built for the KeeperHub *Agents Onchain* hackathon. Full design in [SPEC.md](./S
 
 ## Reliability scorecard
 
-Measured on Sepolia, 2026-08-02. Three trials per cell. Full method, caveats and
-raw data in [chaos/RESULTS.md](./chaos/RESULTS.md).
+Measured on Sepolia, 2026-08-02, four trials per cell. Method, caveats and raw
+data in [chaos/RESULTS.md](./chaos/RESULTS.md).
 
 | Scenario | KeeperHub | ethers (blind gas limit) | ethers (default) |
 |---|---|---|---|
-| Gas underpricing (0.05 gwei vs ~0.98 market) | **3/3 landed** | 0/3, all stuck | contaminated run |
-| Congestion (3 concurrent from one wallet) | **3/3 landed** | 1/3 | 1/3 |
-| Revert | inconclusive | inconclusive | inconclusive |
+| Gas underpricing (0.05 gwei vs ~0.98 market) | **4/4 landed** | **0/4**, all stuck | no data |
+| Congestion (4 concurrent from one wallet) | **4/4 landed** | 1/4 | 2/4 |
+| Revert | all refused | all refused | all refused |
 
-**Underpricing** is the clearest result. Both sides got the same unusable gas
-price. KeeperHub adjusted and landed everything; the blind baseline broadcast
-three transactions that never mined, confirmed from chain state (confirmed nonce
-stayed at 14 while pending reached 17) and cleared only by same-nonce
-replacement at 5x market.
+**Underpricing** is the clearest result and reproduces across runs. Both sides
+got the same unusable gas price. KeeperHub adjusted and landed everything; the
+blind baseline broadcast four transactions that never mined, confirmed from
+chain state and clearable only by same-nonce replacement at 5x market.
 
-**Congestion** cost both baselines two of three transactions to
-`-32000 "already known"`. KeeperHub sequenced all three.
+**Congestion** cost the baselines two and three transactions to
+`-32000 "already known"`. KeeperHub sequenced all four.
 
-**Revert is inconclusive and we say so.** The public RPC refuses to relay
-reverting transactions, so nobody burned gas and there was nothing to compare.
+**Revert shows no difference.** The public RPC refuses to relay reverting
+transactions, so nobody burned gas and there is nothing to separate. We report
+that rather than dressing it up.
 
-Two things we got wrong and corrected rather than shipped:
+### The harness distinguishes three kinds of "it didn't work"
 
-- Plain ethers does **not** blindly broadcast doomed calls. It estimates gas by
-  default and the estimate reverts first. Only agents that hardcode a gas limit
-  lose that protection, which is why `naive-blind` exists.
-- Our scoring counted any `estimateGas` error as a prevented call, which would
-  have credited an RPC outage to the baseline as a safety feature. Prevention
-  now requires evidence of a decoded revert.
+| Class | Meaning | Effect on the rate |
+|---|---|---|
+| failed / stuck | The backend under test did not deliver | Counted against it |
+| prevented | Refused *because the call would revert* | Counted, separately |
+| excluded | Our own network or RPC broke | Removed from the denominator |
 
-Reproduce with `npm run chaos -- --all`.
+That last row is why one cell reads "no data" instead of 0%. It also corrected a
+real error: an earlier run scored KeeperHub 1/3 on underpricing, which read as a
+reliability problem, when two of those trials were `fetch failed` from our own
+connection. With exclusions the scenario reproduces at 4/4.
+
+Four bugs in the harness itself, including one that would have credited an RPC
+outage to the baseline as a safety feature, are written up in
+[RESULTS.md](./chaos/RESULTS.md).
+
+Reproduce with `npm run chaos -- --all --n 4`.
 
 ---
 
@@ -126,7 +134,7 @@ code verified byte-identical to the local compile.
 
 | Component | State |
 |---|---|
-| Risk tiers, probability model, cost/benefit | done, 49 tests passing |
+| Risk tiers, probability model, cost/benefit | done, 56 tests passing |
 | Remediation selection and amount math | done, verified against the live position |
 | Position tooling (`pos:*` scripts) | done: open, fund, danger, status, evaluate |
 | `hf-watch-critical` workflow | done, enabled, both branches verified |
@@ -135,7 +143,7 @@ code verified byte-identical to the local compile.
 | KeeperHub REST paths | unconfirmed; verified calls went through MCP |
 | ARMED-tier agent loop | decision logic done, not yet wired to a trigger |
 | Attestation from the agent | done by hand via MCP; not yet automatic |
-| Chaos harness | **runnable, 2 of 3 scenarios give solid results** ([RESULTS](./chaos/RESULTS.md)) |
+| Chaos harness | **runnable end to end, 2 of 3 scenarios differentiate** ([RESULTS](./chaos/RESULTS.md)) |
 | Marketplace listing / x402 | not started, and settlement is mainnet-only |
 | Dashboard | not started |
 
@@ -158,7 +166,7 @@ Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
 ```bash
 npm install
-npm test          # 49 tests, no network required
+npm test          # 56 tests, no network required
 npm run typecheck
 ```
 

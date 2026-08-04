@@ -1,9 +1,9 @@
 # Chaos harness results
 
-Measured on Sepolia, 2026-08-02. Raw per-trial data in `chaos/runs/`.
+Measured on Sepolia, 2026-08-02. Four trials per cell. Raw per-trial data in
+`chaos/runs/`.
 
-Reproduce: `npm run chaos:fund`, then `npm run chaos -- --all --n 3`, and
-`npm run chaos:unstick` between runs.
+Reproduce: `npm run chaos:fund`, then `npm run chaos -- --all --n 4`.
 
 ## Backends
 
@@ -15,86 +15,107 @@ Reproduce: `npm run chaos:fund`, then `npm run chaos -- --all --n 3`, and
 
 `naive-blind` exists because of something we got wrong at first. We assumed a
 simple ethers agent broadcasts doomed transactions and burns gas. It does not:
-ethers estimates gas by default and the estimate reverts before anything is
-sent. Agents lose that protection only when they hardcode a gas limit, which is
-a real and common pattern (it saves an RPC round trip and stops estimation
-failures from blocking sends). Both variants are measured because the difference
-between them is the interesting part.
+ethers estimates by default and the estimate reverts before anything is sent.
+Agents lose that protection only when they hardcode a gas limit, which is a real
+and common pattern, since it saves an RPC round trip and stops estimation
+failures from blocking sends. The gap between the two variants is the point.
 
 ## Results
 
-Three trials per cell. Small, and reported as such.
-
-| Scenario | Backend | Landed | Stuck | Median latency | Status |
-|---|---|---|---|---|---|
-| gas-underpricing | keeperhub | **3/3** | 0 | 11,963ms | solid |
-| gas-underpricing | naive-blind | **0/3** | 3 | n/a | solid |
-| gas-underpricing | naive | 0/3 | 0 | n/a | contaminated, see below |
-| congestion | keeperhub | **3/3** | 0 | 39,189ms | solid |
-| congestion | naive | 1/3 | 0 | 8,036ms | solid |
-| congestion | naive-blind | 1/3 | 0 | 15,869ms | solid |
-| revert | all three | 0/3 | 0 | n/a | inconclusive, see below |
+| Scenario | Backend | Landed | Stuck | Failed | Excluded | Median latency |
+|---|---|---|---|---|---|---|
+| gas-underpricing | keeperhub | **4/4 (100%)** | 0 | 0 | 0 | 13,415ms |
+| gas-underpricing | naive-blind | **0/4 (0%)** | 4 | 0 | 0 | n/a |
+| gas-underpricing | naive | no data | 0 | 0 | 4 | n/a |
+| congestion | keeperhub | **4/4 (100%)** | 0 | 0 | 0 | 31,033ms |
+| congestion | naive | 2/4 (50%) | 0 | 2 | 0 | 13,053ms |
+| congestion | naive-blind | 1/4 (25%) | 0 | 3 | 0 | 8,056ms |
+| revert | all three | 0/4, all prevented | 0 | 0 | 0 | n/a |
 
 ### Gas underpricing: the clearest result
 
-Both sides were handed the same bad instruction, a gas price of 0.05 gwei
+Both sides were handed the same unusable instruction, a gas price of 0.05 gwei
 against a market of roughly 0.98 gwei.
 
-**KeeperHub landed all three. The blind baseline landed none**, and all three of
-its transactions were still sitting in the mempool at the 45 second deadline.
-Confirmed independently from chain state: the baseline wallet's confirmed nonce
-stayed at 14 while its pending nonce reached 17, so three transactions had been
-broadcast and none mined. Clearing them needed explicit same-nonce replacements
-at five times market price (`npm run chaos:unstick`).
+**KeeperHub landed 4/4. The blind baseline landed 0/4**, with all four still
+sitting in the mempool at the deadline. Confirmed independently from chain
+state: the baseline's confirmed nonce did not move while its pending nonce
+advanced by four, so four transactions were broadcast and none mined. Clearing
+them required explicit same-nonce replacements at five times market price.
 
-This is the gas-escalation claim, measured: given a price that cannot mine,
-KeeperHub adjusted and the transactions landed.
+This is the gas-escalation claim, measured. Reproduced across two separate runs.
 
 ### Congestion: nonce management
 
-Three transactions fired concurrently from one wallet. KeeperHub sequenced all
-three. Both ethers baselines landed one and lost two to
+Four transactions fired concurrently from one wallet. KeeperHub sequenced all
+four. The ethers baselines landed 2/4 and 1/4, losing the rest to
 `-32000 "already known"`.
 
 Honest caveat on the mechanism: our workload submits an identical call each
 time, so concurrent sends produce byte-identical transactions and the node
-rejects the duplicates. A workload with varying calldata would instead show
-same-nonce replacement drops. The root cause is the same either way, no managed
-nonce, but the specific error would differ.
+rejects duplicates. A workload with varying calldata would instead show
+same-nonce replacement drops. Same root cause, no managed nonce, but the
+specific error would differ.
 
-### Revert: inconclusive, and we are not claiming otherwise
+### Revert: no differentiation, and we are not inventing any
 
-We could not demonstrate wasted gas on reverting transactions, because the
-public RPC refuses to relay them. Even `naive-blind`, with estimation disabled,
-got `transaction execution reverted (action="sendTransaction")`: the node
-simulated at submission and rejected it. Nothing reached a block, so no gas was
-burned by anyone and there is nothing to compare.
+All three backends refused all four reverting calls, so there is nothing to
+separate them. The public RPC rejects reverting transactions at submission, and
+even `naive-blind` with estimation disabled got
+`transaction execution reverted (action="sendTransaction")`. Nothing reached a
+block, so no gas was burned by anyone.
 
-KeeperHub also rejected the reverting call, in 2.9 seconds. That is faster than
-one Sepolia block, so it cannot have been mined either, which means it was
-refused at simulation. That inference comes from latency, not from an API field,
-because there is no REST route exposing execution detail.
-
-To measure this properly we would need an RPC that relays reverting
+The scenario as designed, "does the backend waste gas on doomed calls", cannot
+be answered on this RPC. Answering it needs an endpoint that relays reverting
 transactions, or a private mempool.
 
-### The contaminated cell
+## Why some cells say "no data"
 
-The `naive` row under gas-underpricing reads 0/3, but for the wrong reason: all
-three failed with `missing revert data (action="estimateGas")` on an
-`approve(0)` call, which cannot revert. That is an RPC estimation failure,
-almost certainly caused by leftover stuck nonces from the previous run polluting
-pending state. It is not a measurement of anything and should not be cited.
+The `naive` cell under gas-underpricing has four excluded trials and therefore
+reports **no data** rather than 0%.
 
-This also exposed a bug in our own scoring, now fixed: any `estimateGas` error
-was being classified as "prevented", which would have credited an RPC outage to
-the baseline as though it were a deliberate safety feature. Prevention now
-requires evidence the node actually decoded a revert.
+All four failed with `missing revert data (action="estimateGas")` on an
+`approve(0)` call, which cannot revert. That is the public RPC failing to
+answer, not a measurement of the baseline. Counting it as a baseline failure
+would have flattered KeeperHub; counting it as a save would have flattered the
+baseline. It is excluded from the denominator and shown separately.
+
+The harness distinguishes three things that all look like "it didn't work":
+
+| Class | Meaning | Effect on the rate |
+|---|---|---|
+| failed / stuck | The backend under test did not deliver | Counted against it |
+| prevented | The call was refused *because it would revert* | Counted, separately |
+| excluded | Our network or RPC broke | Removed from the denominator |
+
+This mattered. An earlier run scored KeeperHub 1/3 on underpricing, which read
+as a reliability problem. Two of those three trials were `fetch failed` from our
+own connection. With exclusions, the same scenario reproduces at 4/4.
+
+## Bugs this harness found in itself
+
+Recorded because a measurement tool that has never been wrong has not been
+looked at hard enough.
+
+1. **`estimateGas` errors were all scored as "prevented"**, which credited an
+   RPC outage to the baseline as though it were a deliberate safety feature.
+   Prevention now requires evidence the node decoded an actual revert.
+2. **The underpricing scenario underpriced only KeeperHub.** The baselines' gas
+   price is fixed at construction, so the first version of that row compared
+   nothing. Scenarios now carry their own baseline gas price.
+3. **BigInt broke the KeeperHub path entirely.** `JSON.stringify` throws on it,
+   so the first run's KeeperHub calls never left the process.
+4. **No hard per-trial deadline.** A stuck baseline transaction made later
+   ethers calls block on the same wallet's nonce, and two runs had to be killed.
+   Fixed: every trial races a harness-level deadline and is recorded as
+   abandoned if it blows it. Abandoned is tracked apart from stuck, because
+   abandoning means we stopped watching, not that we observed non-inclusion.
+5. **Stuck transactions contaminated the following scenario.** The harness now
+   clears the baseline wallet between backends rather than at the end.
 
 ## What we did not run
 
-Three scenarios are defined but not runnable, and the harness prints them on
-every run rather than quietly omitting them:
+Printed on every run rather than quietly omitted:
 
 | Scenario | Why not |
 |---|---|
@@ -106,23 +127,10 @@ every run rather than quietly omitting them:
 
 - **Gas used is unavailable for KeeperHub.** The direct-execution REST endpoint
   returns only `{ executionId, status }` and there is no REST route for detail.
-  Those cells print `n/a`, never `0`, because zero would read as "no gas
-  wasted", which is a claim we cannot support.
-- **KeeperHub latency includes queueing and confirmation**, since the POST
+  Those cells print `n/a`, never `0`, since zero would read as "no gas wasted".
+- **KeeperHub latency includes queueing and confirmation**, because the POST
   blocks until the execution is terminal. That is what a caller experiences, so
-  it is the fair comparison, but it is not directly comparable to the
-  baseline's time-to-broadcast.
-- **Three trials per cell** is enough to show a 3/3 versus 0/3 split and not
+  it is the honest number, but it is not comparable to the baseline's
+  time-to-broadcast.
+- **Four trials per cell** is enough to show a 4/4 versus 0/4 split and not
   enough to put error bars on latency.
-- Transient transport errors are retried up to three times on the KeeperHub
-  path. `fetch failed` is not an answer from the API, and counting it as a
-  KeeperHub failure would put local network flakiness on its scorecard.
-
-## Known harness limitation
-
-There is no hard per-trial timeout above the backend call. A stuck baseline
-transaction can wedge a run: after the underpriced transactions pile up, later
-ethers calls block on the same wallet's nonce and the process hangs rather than
-failing the trial. Two runs had to be killed and cleared with
-`npm run chaos:unstick`. Fixing this means racing every trial against a
-harness-level deadline, not just the receipt wait.

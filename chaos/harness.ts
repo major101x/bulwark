@@ -32,6 +32,46 @@ import {
   type ExecutionResult,
 } from '../agent/executor.ts';
 import { SCENARIOS, type Scenario } from './injectors.ts';
+import { clearStuckNonces } from './mempool.ts';
+
+/**
+ * Hard ceiling on a single trial, above the backend's own deadline.
+ *
+ * The backend deadlines only bound the wait for a receipt. They do not bound
+ * everything else a call can block on: ethers will happily sit forever
+ * resolving a nonce against a wallet whose earlier transactions are stuck, and
+ * that wedged two runs before this existed. A trial that blows this budget is
+ * recorded as stuck and the run keeps going, because one hung trial must not
+ * cost the whole matrix.
+ */
+const TRIAL_DEADLINE_MS = Number(process.env.CHAOS_TRIAL_DEADLINE_MS ?? '120000');
+
+/**
+ * Race a promise against a deadline.
+ *
+ * The loser is abandoned, not cancelled: there is no way to cancel an in-flight
+ * ethers call. It keeps running in the background and may still broadcast, so
+ * anything downstream must treat a timed-out trial as "outcome unknown, a
+ * transaction may exist" rather than "nothing happened". That is exactly why
+ * the harness clears stuck nonces afterwards instead of assuming it is clean.
+ */
+export async function withDeadline<T>(
+  work: () => Promise<T>,
+  ms: number,
+  onTimeout: () => T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work(),
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(onTimeout()), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
 
 const SEPOLIA = 11155111;
 const LINK = '0xf8Fb3713D459D7C1018BD0A49D19b4C44290EBE5';
@@ -84,11 +124,17 @@ export interface Scorecard {
   scenario: string;
   backend: string;
   trials: number;
+  /** Trials discarded because our own network or RPC failed, not the backend. */
+  excluded: number;
+  /** Trials that actually measured something: trials minus excluded. */
+  valid: number;
   executed: number;
   prevented: number;
   successRate: number;
   medianLatencyMs: number;
   stuck: number;
+  /** Subset of `stuck` where we stopped waiting rather than observed a miss. */
+  abandoned: number;
   failed: number;
   wastedGas: bigint | null;
 }
@@ -104,23 +150,30 @@ export function score(outcomes: TrialOutcome[]): Scorecard {
   const first = outcomes[0];
   if (!first) throw new Error('cannot score an empty run');
 
-  const executed = outcomes.filter((o) => o.ok);
+  const excluded = outcomes.filter((o) => o.excluded);
+  const valid = outcomes.filter((o) => !o.excluded);
+  const executed = valid.filter((o) => o.ok);
   // Latency only from trials that landed. Averaging in timeouts would flatter
   // the slower backend by capping its worst cases at the deadline.
   const latencies = executed.map((o) => o.latencyMs);
-  const prevented = outcomes.filter((o) => o.prevented);
-  const withGas = outcomes.filter((o) => !o.ok && o.gasUsed !== undefined);
+  const prevented = valid.filter((o) => o.prevented);
+  const withGas = valid.filter((o) => !o.ok && o.gasUsed !== undefined);
 
   return {
     scenario: first.scenario,
     backend: first.backend,
     trials: outcomes.length,
+    excluded: excluded.length,
+    valid: valid.length,
     executed: executed.length,
     prevented: prevented.length,
-    successRate: executed.length / outcomes.length,
+    // Denominator is valid trials. A run where the network died must not read
+    // as a backend that failed.
+    successRate: valid.length === 0 ? 0 : executed.length / valid.length,
     medianLatencyMs: Math.round(median(latencies)),
-    stuck: outcomes.filter((o) => o.stuck).length,
-    failed: outcomes.filter((o) => !o.ok && !o.stuck && !o.prevented).length,
+    stuck: valid.filter((o) => o.stuck).length,
+    abandoned: valid.filter((o) => o.abandoned).length,
+    failed: valid.filter((o) => !o.ok && !o.stuck && !o.prevented).length,
     // Only meaningful when the backend reports receipts at all. Null means
     // "not measurable", which is different from zero.
     wastedGas: withGas.length > 0 ? withGas.reduce((s, o) => s + o.gasUsed!, 0n) : null,
@@ -134,19 +187,41 @@ export async function runScenario(
 ): Promise<TrialOutcome[]> {
   const run = async (attempt: number): Promise<TrialOutcome> => {
     const request = scenario.mutate(BASE_REQUEST, attempt);
+    const startedAt = Date.now();
     let result: ExecutionResult;
     try {
-      result = await backend.execute(request);
+      result = await withDeadline(
+        () => backend.execute(request),
+        TRIAL_DEADLINE_MS,
+        () => ({
+          ok: false,
+          latencyMs: Date.now() - startedAt,
+          bumps: 0,
+          stuck: true,
+          abandoned: true,
+          error: `trial exceeded ${TRIAL_DEADLINE_MS}ms and was abandoned`,
+        }),
+      );
     } catch (err) {
       result = {
         ok: false,
-        latencyMs: 0,
+        latencyMs: Date.now() - startedAt,
         bumps: 0,
         error: err instanceof Error ? err.message : String(err),
       };
     }
     process.stdout.write(
-      result.ok ? '.' : result.prevented ? 'P' : result.stuck ? 'T' : 'x',
+        result.excluded
+        ? '-'
+        : result.ok
+          ? '.'
+          : result.prevented
+            ? 'P'
+            : result.abandoned
+              ? 'A'
+              : result.stuck
+                ? 'T'
+                : 'x',
     );
     return { ...result, backend: backend.name, scenario: scenario.name, attempt };
   };
@@ -168,14 +243,15 @@ export async function runScenario(
 
 export function renderScorecard(cards: Scorecard[]): string {
   const lines = [
-    '| Scenario | Backend | Landed | Prevented | Stuck | Failed | Median latency | Wasted gas |',
-    '|---|---|---|---|---|---|---|---|',
+    '| Scenario | Backend | Landed | Prevented | Stuck | Abandoned | Failed | Excluded | Median latency | Wasted gas |',
+    '|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const c of cards) {
     lines.push(
-      `| ${c.scenario} | ${c.backend} | ${c.executed}/${c.trials} ` +
-        `(${(c.successRate * 100).toFixed(0)}%) | ${c.prevented} | ${c.stuck} ` +
-        `| ${c.failed} | ${c.medianLatencyMs}ms | ` +
+      `| ${c.scenario} | ${c.backend} | ${c.executed}/${c.valid} ` +
+        `(${c.valid === 0 ? 'no data' : (c.successRate * 100).toFixed(0) + '%'}) ` +
+        `| ${c.prevented} | ${c.stuck} ` +
+        `| ${c.abandoned} | ${c.failed} | ${c.excluded} | ${c.medianLatencyMs}ms | ` +
         `${c.wastedGas === null ? 'n/a' : c.wastedGas.toString()} |`,
     );
   }
@@ -245,10 +321,23 @@ async function main(): Promise<void> {
       keeperhub,
       ...baselines(scenario.baselineGasGwei ?? staticGwei),
     ]) {
-      process.stdout.write(`   ${backend.name.padEnd(10)} `);
+      process.stdout.write(`   ${backend.name.padEnd(12)} `);
       const outcomes = await runScenario(backend, scenario, trials);
       raw.push(...outcomes);
       cards.push(score(outcomes));
+
+      // Leaving stuck transactions behind is how a previous run produced a cell
+      // that measured nothing. Clear before the next backend rather than after
+      // the whole matrix, so no two cells can share a wedged wallet.
+      if (backend.name !== 'keeperhub') {
+        const report = await clearStuckNonces(rpc, key, (line) => console.log(line));
+        if (report.stuck > 0) {
+          console.log(
+            `   cleaned up ${report.cleared}/${report.stuck} stuck` +
+              (report.failed > 0 ? `, ${report.failed} still wedged` : ''),
+          );
+        }
+      }
     }
   }
 
@@ -260,7 +349,19 @@ async function main(): Promise<void> {
   );
 
   console.log(`\n\n${renderScorecard(cards)}\n`);
-  console.log('Legend: . landed   P prevented pre-flight   T stuck   x failed');
+  console.log(
+    'Legend: . landed   P prevented pre-flight   T stuck   ' +
+      'A abandoned at trial deadline   x failed   - excluded (our network/RPC)',
+  );
+
+  const abandoned = raw.filter((r) => r.abandoned).length;
+  if (abandoned > 0) {
+    console.log(
+      `\n${abandoned} trial(s) hit the ${TRIAL_DEADLINE_MS}ms hard deadline. ` +
+        'Their transactions may still have been broadcast, so treat those ' +
+        'cells as "outcome unknown" rather than as failures.',
+    );
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
