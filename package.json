@@ -20,7 +20,9 @@
     "pos:evaluate": "tsx scripts/evaluate.ts",
     "chaos:fund": "tsx scripts/fund-chaos.ts",
     "chaos:unstick": "tsx scripts/unstick.ts",
-    "agent:webhook": "tsx agent/index.ts"
+    "agent:webhook": "tsx agent/index.ts",
+    "dashboard": "tsx dashboard/server.ts",
+    "ledger:backfill": "tsx scripts/backfill-ledger.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

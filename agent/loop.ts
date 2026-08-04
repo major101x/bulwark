@@ -24,6 +24,7 @@ import 'dotenv/config';
 
 import { attestDecision } from './attest.ts';
 import { KeeperHubBackend } from './executor.ts';
+import { append as appendLedger } from './ledger.ts';
 import { decide } from './remediation.ts';
 import { classify, gasPolicyFor, pollIntervalBlocks } from './risk.ts';
 import type { Decision, RiskTier } from './types.ts';
@@ -168,6 +169,25 @@ async function tick(): Promise<number> {
           `  attested ${decision.tier}/${decision.action} on mainnet` +
             (attestation.ok ? '' : `: FAILED ${attestation.error}`),
         );
+
+        // Record the hash immediately. Free RPC tiers stop serving logs older
+        // than a few hundred blocks, so an attestation we do not write down now
+        // becomes unreadable within about half an hour.
+        if (attestation.ok && attestation.txHash) {
+          appendLedger({
+            at: new Date().toISOString(),
+            chainId: 1,
+            txHash: attestation.txHash,
+            watchedWallet: position.wallet,
+            action: decision.remediation?.kind ?? decision.action,
+            tier: decision.tier,
+            healthFactor: position.healthFactor,
+            expectedLossUsd: decision.expectedLossUsd,
+            rescueCostUsd: decision.rescueCostUsd,
+            gasPriceGwei: gas.baseFeeGwei,
+            remediationTxHash: remediationTxHash ?? null,
+          });
+        }
       } catch (err) {
         // A failed attestation must never mask a successful rescue.
         console.error(`  attestation error: ${err}`);

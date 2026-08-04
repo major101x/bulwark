@@ -8,3 +8,5 @@ revenue.json
 wallet.json
 out/
 cache/
+data/
+.playwright-mcp/

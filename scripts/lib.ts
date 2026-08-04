@@ -7,7 +7,7 @@
  */
 
 import 'dotenv/config';
-import { Contract, FallbackProvider, JsonRpcProvider, Wallet, formatUnits } from 'ethers';
+import { Contract, JsonRpcProvider, Wallet, formatUnits } from 'ethers';
 
 import type {
   GasSnapshot,
@@ -123,27 +123,49 @@ const SEPOLIA_RPCS = [
   'https://sepolia.drpc.org',
 ].filter((u): u is string => typeof u === 'string' && u.length > 0);
 
-let cachedProvider: FallbackProvider | undefined;
+/**
+ * A plain provider for one endpoint.
+ *
+ * We tried ethers' FallbackProvider here and backed it out. It broke the write
+ * path (network detection failed under a Wallet) and then the read path ("no
+ * runners?!" once its sub-providers were unhealthy), which is a lot of opaque
+ * failure to inherit in exchange for retry logic we can write in ten lines and
+ * actually debug.
+ */
+export function providerFor(url: string): JsonRpcProvider {
+  return new JsonRpcProvider(url, SEPOLIA_CHAIN_ID, {
+    staticNetwork: true,
+    // ethers batches parallel reads by default and free tiers reject batches
+    // (drpc caps them at 3), failing a whole observation rather than one call.
+    batchMaxCount: 1,
+  });
+}
+
+/** Default read provider: the first configured endpoint. */
+export function provider(): JsonRpcProvider {
+  return providerFor(SEPOLIA_RPCS[0]!);
+}
 
 /**
- * Quorum of one: take the first endpoint that answers rather than making them
- * agree. We are reading public state, not settling a dispute, and waiting for
- * consensus would double the latency of every poll for no benefit.
+ * Run a read against each endpoint in turn until one answers.
+ *
+ * Every public Sepolia endpoint we tried dropped requests at some point today.
+ * Reads are idempotent, so retrying elsewhere is always safe.
  */
-export function provider(): FallbackProvider {
-  if (cachedProvider === undefined) {
-    cachedProvider = new FallbackProvider(
-      SEPOLIA_RPCS.map((url, i) => ({
-        provider: new JsonRpcProvider(url, SEPOLIA_CHAIN_ID, { staticNetwork: true }),
-        priority: i + 1,
-        weight: 1,
-        stallTimeout: 3000,
-      })),
-      SEPOLIA_CHAIN_ID,
-      { quorum: 1 },
-    );
+export async function withRpcFallback<T>(
+  fn: (p: JsonRpcProvider) => Promise<T>,
+): Promise<T> {
+  let last: unknown;
+  for (const url of SEPOLIA_RPCS) {
+    try {
+      return await fn(providerFor(url));
+    } catch (err) {
+      last = err;
+    }
   }
-  return cachedProvider;
+  throw last instanceof Error
+    ? new Error(`all ${SEPOLIA_RPCS.length} Sepolia endpoints failed: ${last.message}`)
+    : new Error('all Sepolia endpoints failed');
 }
 
 /**
@@ -158,6 +180,7 @@ export function provider(): FallbackProvider {
 export function writeProvider(): JsonRpcProvider {
   return new JsonRpcProvider(SEPOLIA_RPCS[0], SEPOLIA_CHAIN_ID, {
     staticNetwork: true,
+    batchMaxCount: 1,
   });
 }
 
@@ -176,14 +199,11 @@ export function positionSigner(): Wallet {
   return new Wallet(key, writeProvider());
 }
 
-export function pool(runner: Wallet | FallbackProvider | JsonRpcProvider): PoolContract {
+export function pool(runner: Wallet | JsonRpcProvider): PoolContract {
   return new Contract(AAVE.pool, POOL_ABI, runner) as unknown as PoolContract;
 }
 
-export function erc20(
-  address: string,
-  runner: Wallet | FallbackProvider | JsonRpcProvider,
-): Erc20Contract {
+export function erc20(address: string, runner: Wallet | JsonRpcProvider): Erc20Contract {
   return new Contract(address, ERC20_ABI, runner) as unknown as Erc20Contract;
 }
 
@@ -199,8 +219,11 @@ export interface AccountData {
   healthFactor: number;
 }
 
-export async function readAccount(user: string): Promise<AccountData> {
-  const raw = await pool(provider()).getUserAccountData(user);
+export async function readAccount(
+  user: string,
+  p: JsonRpcProvider = provider(),
+): Promise<AccountData> {
+  const raw = await pool(p).getUserAccountData(user);
   const hfRaw = raw.healthFactor as bigint;
   return {
     totalCollateralUsd: Number(formatUnits(raw.totalCollateralBase, BASE_DECIMALS)),
@@ -291,8 +314,11 @@ export interface Observation {
 
 const ORACLE_ABI = ['function getAssetPrice(address asset) view returns (uint256)'];
 
-export async function priceUsd(asset: string): Promise<number> {
-  const oracle = new Contract(AAVE.oracle, ORACLE_ABI, provider());
+export async function priceUsd(
+  asset: string,
+  p: JsonRpcProvider = provider(),
+): Promise<number> {
+  const oracle = new Contract(AAVE.oracle, ORACLE_ABI, p);
   const raw = (await oracle.getAssetPrice!(asset)) as bigint;
   // Aave quotes its base currency with 8 decimals.
   return Number(formatUnits(raw, 8));
@@ -302,15 +328,24 @@ export async function observe(
   watchedWallet: string,
   keeperWallet: string,
 ): Promise<Observation> {
-  const p = provider();
-  const account = await readAccount(watchedWallet);
+  // The whole observation runs against one endpoint so the numbers are a
+  // consistent snapshot rather than a mix of two chain views.
+  return withRpcFallback((p) => observeOn(p, watchedWallet, keeperWallet));
+}
+
+async function observeOn(
+  p: JsonRpcProvider,
+  watchedWallet: string,
+  keeperWallet: string,
+): Promise<Observation> {
+  const account = await readAccount(watchedWallet, p);
 
   const [debtAsset, collateralAsset, debtAssetPriceUsd, collateralAssetPriceUsd, feeData] =
     await Promise.all([
       erc20(TOKENS.USDC.address, p).balanceOf(keeperWallet),
       erc20(TOKENS.LINK.address, p).balanceOf(keeperWallet),
-      priceUsd(TOKENS.USDC.address),
-      priceUsd(TOKENS.LINK.address),
+      priceUsd(TOKENS.USDC.address, p),
+      priceUsd(TOKENS.LINK.address, p),
       p.getFeeData(),
     ]);
 
@@ -334,7 +369,7 @@ export async function observe(
     gas: {
       baseFeeGwei: Number(formatUnits(feeData.gasPrice ?? 1_000_000_000n, 'gwei')),
       // Gas is paid in the chain's native token, so price ETH, not collateral.
-      ethPriceUsd: await priceUsd(TOKENS.WETH.address),
+      ethPriceUsd: await priceUsd(TOKENS.WETH.address, p),
     },
   };
 }
