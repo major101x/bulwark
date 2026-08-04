@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "tsx --test agent/*.test.ts chaos/*.test.ts",
-    "agent": "tsx agent/index.ts",
+    "agent": "tsx agent/loop.ts",
     "chaos": "tsx chaos/harness.ts",
     "typecheck": "tsc --noEmit",
     "first-tx": "tsx starter-template/first-tx.ts",
@@ -19,7 +19,8 @@
     "pos:danger": "tsx scripts/danger.ts",
     "pos:evaluate": "tsx scripts/evaluate.ts",
     "chaos:fund": "tsx scripts/fund-chaos.ts",
-    "chaos:unstick": "tsx scripts/unstick.ts"
+    "chaos:unstick": "tsx scripts/unstick.ts",
+    "agent:webhook": "tsx agent/index.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

@@ -17,6 +17,7 @@
  * executions went through the MCP tools. See `TO VERIFY` markers.
  */
 
+import type { ProtocolActionResponse } from './keeperhub-types.ts';
 import type { GasPolicy } from './risk.ts';
 
 export interface ExecutionRequest {
@@ -237,6 +238,45 @@ export class KeeperHubBackend implements ExecutionBackend {
         bumps: 0,
         // Transport failures survive withRetry only when our own connectivity
         // is down. Charging those to KeeperHub would measure our network.
+        excluded: TRANSPORT_FAILURE.test(message),
+        error: message,
+      };
+    }
+  }
+
+  /**
+   * Run a protocol action (aave-v3/supply, aave-v3/repay, and friends).
+   *
+   * The action type is a path segment, not a body field, and the parameters sit
+   * flat in the body rather than nested under `params` the way the MCP tool
+   * takes them. Unlike contract-call this returns the result inline, including
+   * the transaction hash, so it is the only write path that yields a receipt
+   * without going through a workflow.
+   */
+  async executeProtocolAction(
+    actionType: string,
+    params: Record<string, string>,
+  ): Promise<ExecutionResult> {
+    const started = Date.now();
+    try {
+      const res = await this.withRetry(() =>
+        this.request<ProtocolActionResponse>(`/api/execute/${actionType}`, params),
+      );
+      return {
+        ok: res.success === true && res.executedCall?.reverted !== true,
+        txHash: res.transactionHash,
+        latencyMs: Date.now() - started,
+        bumps: 0,
+        gasUsed: res.gasUsed ? BigInt(res.gasUsed) : undefined,
+        sponsored: res.sponsored,
+        error: res.success ? undefined : res.error,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        ok: false,
+        latencyMs: Date.now() - started,
+        bumps: 0,
         excluded: TRANSPORT_FAILURE.test(message),
         error: message,
       };

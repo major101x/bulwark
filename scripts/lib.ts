@@ -7,7 +7,13 @@
  */
 
 import 'dotenv/config';
-import { Contract, JsonRpcProvider, Wallet, formatUnits } from 'ethers';
+import { Contract, FallbackProvider, JsonRpcProvider, Wallet, formatUnits } from 'ethers';
+
+import type {
+  GasSnapshot,
+  PositionSnapshot,
+  WalletBalances,
+} from '../agent/types.ts';
 import type { ContractTransactionResponse } from 'ethers';
 
 export const SEPOLIA_CHAIN_ID = 11155111;
@@ -103,10 +109,56 @@ export interface Erc20Contract {
   decimals(): Promise<bigint>;
 }
 
-export function provider(): JsonRpcProvider {
-  return new JsonRpcProvider(
-    process.env.SEPOLIA_RPC_URL ?? 'https://ethereum-sepolia-rpc.publicnode.com',
-  );
+/**
+ * Sepolia endpoints, in preference order.
+ *
+ * A single public RPC dropped repeatedly over a day of building: it wedged an
+ * agent tick, and it polluted a chaos cell with estimateGas failures that were
+ * nothing to do with the backend under test. One endpoint is a single point of
+ * failure for both the keeper and its own measurements.
+ */
+const SEPOLIA_RPCS = [
+  process.env.SEPOLIA_RPC_URL,
+  'https://ethereum-sepolia-rpc.publicnode.com',
+  'https://sepolia.drpc.org',
+].filter((u): u is string => typeof u === 'string' && u.length > 0);
+
+let cachedProvider: FallbackProvider | undefined;
+
+/**
+ * Quorum of one: take the first endpoint that answers rather than making them
+ * agree. We are reading public state, not settling a dispute, and waiting for
+ * consensus would double the latency of every poll for no benefit.
+ */
+export function provider(): FallbackProvider {
+  if (cachedProvider === undefined) {
+    cachedProvider = new FallbackProvider(
+      SEPOLIA_RPCS.map((url, i) => ({
+        provider: new JsonRpcProvider(url, SEPOLIA_CHAIN_ID, { staticNetwork: true }),
+        priority: i + 1,
+        weight: 1,
+        stallTimeout: 3000,
+      })),
+      SEPOLIA_CHAIN_ID,
+      { quorum: 1 },
+    );
+  }
+  return cachedProvider;
+}
+
+/**
+ * Single endpoint for anything that signs.
+ *
+ * Writes deliberately do NOT use the fallback provider. A signer that reads its
+ * nonce from whichever endpoint answered first can see two different views and
+ * build two transactions with the same nonce, which is the exact failure the
+ * chaos harness exists to measure. Reads are idempotent and want resilience;
+ * writes want one consistent view.
+ */
+export function writeProvider(): JsonRpcProvider {
+  return new JsonRpcProvider(SEPOLIA_RPCS[0], SEPOLIA_CHAIN_ID, {
+    staticNetwork: true,
+  });
 }
 
 /**
@@ -121,14 +173,17 @@ export function positionSigner(): Wallet {
       'Set SEPOLIA_PRIVATE_KEY in .env (testnet key for the position wallet).',
     );
   }
-  return new Wallet(key, provider());
+  return new Wallet(key, writeProvider());
 }
 
-export function pool(runner: Wallet | JsonRpcProvider): PoolContract {
+export function pool(runner: Wallet | FallbackProvider | JsonRpcProvider): PoolContract {
   return new Contract(AAVE.pool, POOL_ABI, runner) as unknown as PoolContract;
 }
 
-export function erc20(address: string, runner: Wallet | JsonRpcProvider): Erc20Contract {
+export function erc20(
+  address: string,
+  runner: Wallet | FallbackProvider | JsonRpcProvider,
+): Erc20Contract {
   return new Contract(address, ERC20_ABI, runner) as unknown as Erc20Contract;
 }
 
@@ -215,4 +270,71 @@ export function explainAaveError(err: unknown): string {
     return `Aave error ${reason}: ${AAVE_ERRORS[reason]}`;
   }
   return err instanceof Error ? err.message : String(err);
+}
+
+
+// --- Observation -----------------------------------------------------------
+
+/**
+ * Read everything a decision needs from chain in one place.
+ *
+ * Deliberately uses plain RPC rather than KeeperHub actions: observing is free
+ * over RPC and costs a billable execution through KeeperHub, and at one poll
+ * per interval that difference is the whole monthly quota. KeeperHub is for
+ * writing, not for looking.
+ */
+export interface Observation {
+  position: PositionSnapshot;
+  balances: WalletBalances;
+  gas: GasSnapshot;
+}
+
+const ORACLE_ABI = ['function getAssetPrice(address asset) view returns (uint256)'];
+
+export async function priceUsd(asset: string): Promise<number> {
+  const oracle = new Contract(AAVE.oracle, ORACLE_ABI, provider());
+  const raw = (await oracle.getAssetPrice!(asset)) as bigint;
+  // Aave quotes its base currency with 8 decimals.
+  return Number(formatUnits(raw, 8));
+}
+
+export async function observe(
+  watchedWallet: string,
+  keeperWallet: string,
+): Promise<Observation> {
+  const p = provider();
+  const account = await readAccount(watchedWallet);
+
+  const [debtAsset, collateralAsset, debtAssetPriceUsd, collateralAssetPriceUsd, feeData] =
+    await Promise.all([
+      erc20(TOKENS.USDC.address, p).balanceOf(keeperWallet),
+      erc20(TOKENS.LINK.address, p).balanceOf(keeperWallet),
+      priceUsd(TOKENS.USDC.address),
+      priceUsd(TOKENS.LINK.address),
+      p.getFeeData(),
+    ]);
+
+  return {
+    position: {
+      wallet: watchedWallet,
+      healthFactor: account.healthFactor,
+      totalDebtUsd: account.totalDebtUsd,
+      totalCollateralUsd: account.totalCollateralUsd,
+      liquidationThreshold: account.liquidationThreshold,
+      observedAt: Math.floor(Date.now() / 1000),
+    },
+    balances: {
+      debtAsset,
+      collateralAsset,
+      debtAssetDecimals: TOKENS.USDC.decimals,
+      collateralAssetDecimals: TOKENS.LINK.decimals,
+      debtAssetPriceUsd,
+      collateralAssetPriceUsd,
+    },
+    gas: {
+      baseFeeGwei: Number(formatUnits(feeData.gasPrice ?? 1_000_000_000n, 'gwei')),
+      // Gas is paid in the chain's native token, so price ETH, not collateral.
+      ethPriceUsd: await priceUsd(TOKENS.WETH.address),
+    },
+  };
 }
