@@ -257,4 +257,28 @@ submitted it.
 
 ---
 
+### 2026-08-04 A live marketplace listing is invisible to a natural-language search
+
+**Doing:** Confirming our freshly listed workflow could be discovered by other
+agents, which is the entire point of listing.
+**Expected:** `search_workflows({query: "aave health factor liquidation"})` to
+find a listing whose title and description contain all four words.
+**Got:** Zero results. The same listing ranks **first** for `query: "aave"` and
+first for `sort: "recent"`. Multi-word queries appear to require every term to
+match, so the more precisely an agent describes what it wants, the less it
+finds.
+**Cost:** ~10 minutes, but the real cost lands on sellers: a listing can be
+live, correct and top-ranked, and still return nothing for the phrasing an
+agent would naturally use.
+**Fix:** OR the terms and rank by how many match, which is what anyone expects
+from a search box. This is the same root cause as the earlier
+`search_protocol_actions` entry, now with sharper consequences: that one cost a
+developer a few minutes, this one silently costs marketplace sellers their
+discovery and KeeperHub its 30% on calls that never happen.
+
+**Bounty candidate:** yes. Discovery is the marketplace's whole value to a
+seller, and `search_workflows` is the only surface agents have.
+
+---
+
 <!-- Add entries below as they happen. Do not batch them up. -->

@@ -1,0 +1,78 @@
+{
+  "_comment": [
+    "GasGuard: hf-check. Live workflow id plmde801a695kmcdeyar3.",
+    "Listed on the KeeperHub marketplace as 'gasguard-aave-hf-check' at $0.01/call.",
+    "",
+    "Health factor and liquidation risk for any Aave V3 position on Ethereum",
+    "mainnet, sold to other agents so they need not integrate Aave themselves.",
+    "",
+    "Two constraints shaped this:",
+    "  - `network` only accepts a literal chain id, so the chain cannot be a",
+    "    caller input. The listing is mainnet only rather than multi-chain.",
+    "  - Every input flows from the Manual trigger rather than being hardcoded,",
+    "    which is a listing requirement.",
+    "",
+    "Verified 2026-08-04: execution pky73yefng3n67bc9m8rd resolved the wallet",
+    "template correctly, read the mainnet Pool at 0x87870Bca..., and returned in",
+    "422ms. Discoverable via search_workflows, ranked first for 'aave'."
+  ],
+  "listing": {
+    "slug": "gasguard-aave-hf-check",
+    "priceUsdcPerCall": "0.01",
+    "workflowType": "read",
+    "category": "defi",
+    "chain": "1"
+  },
+  "name": "GasGuard: hf-check",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "trigger",
+      "position": { "x": 0, "y": 0 },
+      "data": {
+        "label": "Trigger",
+        "type": "trigger",
+        "description": "Caller supplies the wallet to inspect.",
+        "config": { "triggerType": "Manual" },
+        "status": "idle"
+      }
+    },
+    {
+      "id": "read-account",
+      "type": "action",
+      "position": { "x": 260, "y": 0 },
+      "data": {
+        "label": "Read Account",
+        "type": "action",
+        "description": "The wallet flows from the trigger rather than being hardcoded, which is a listing requirement and the thing most people get wrong. The chain cannot be a caller input: network only accepts a literal chain id, so this listing is mainnet only.",
+        "config": {
+          "actionType": "aave-v3/get-user-account-data",
+          "network": "1",
+          "user": "{{@trigger-1:Trigger.wallet}}"
+        },
+        "status": "idle"
+      }
+    }
+  ],
+  "edges": [{ "id": "e1", "source": "trigger-1", "target": "read-account" }],
+  "inputSchema": {
+    "type": "object",
+    "required": ["wallet"],
+    "additionalProperties": false,
+    "properties": {
+      "wallet": {
+        "type": "string",
+        "pattern": "^0x[a-fA-F0-9]{40}$",
+        "description": "Address of the Aave V3 position to inspect, 0x-prefixed, on Ethereum mainnet."
+      }
+    }
+  },
+  "outputMapping": {
+    "ltv": "{{@read-account:Read Account.result.ltv}}",
+    "healthFactor": "{{@read-account:Read Account.result.healthFactor}}",
+    "totalDebtBase": "{{@read-account:Read Account.result.totalDebtBase}}",
+    "totalCollateralBase": "{{@read-account:Read Account.result.totalCollateralBase}}",
+    "availableBorrowsBase": "{{@read-account:Read Account.result.availableBorrowsBase}}",
+    "currentLiquidationThreshold": "{{@read-account:Read Account.result.currentLiquidationThreshold}}"
+  }
+}
