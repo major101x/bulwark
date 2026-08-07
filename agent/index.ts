@@ -1,5 +1,5 @@
 /**
- * GasGuard entry point.
+ * Bulwark entry point.
  *
  * Exposes POST /evaluate, which the `hf-watch` KeeperHub workflow calls when a
  * position drops below the watch threshold. The workflow owns the schedule and
@@ -134,6 +134,6 @@ const server = createServer((req, res) => {
 });
 
 server.listen(config.agentPort, () => {
-  console.log(`GasGuard listening on :${config.agentPort}`);
+  console.log(`Bulwark listening on :${config.agentPort}`);
   console.log(config.dryRun ? 'DRY_RUN is ON, nothing will execute.' : '⚠️  LIVE MODE');
 });

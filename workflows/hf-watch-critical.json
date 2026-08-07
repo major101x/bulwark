@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "GasGuard: hf-watch-critical. Live workflow id x1q77bsw0oyhh0es77gla.",
+    "Bulwark: hf-watch-critical. Live workflow id x1q77bsw0oyhh0es77gla.",
     "Autonomous liquidation defense, running entirely inside KeeperHub.",
     "",
     "Why the whole decision lives server-side rather than calling back into the",
@@ -18,7 +18,7 @@
     "                 supply  0xc89edff99b3937047103b4e601722c6de98542b70c2b41537ba46cf48cfd368d",
     "                 both gas sponsored, 243268 gas total"
   ],
-  "name": "GasGuard: hf-watch-critical",
+  "name": "Bulwark: hf-watch-critical",
   "nodes": [
     {
       "id": "trigger-1",

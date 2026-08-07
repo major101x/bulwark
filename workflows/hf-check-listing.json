@@ -1,7 +1,13 @@
 {
   "_comment": [
-    "GasGuard: hf-check. Live workflow id plmde801a695kmcdeyar3.",
+    "Bulwark: hf-check. Live workflow id plmde801a695kmcdeyar3.",
     "Listed on the KeeperHub marketplace as 'gasguard-aave-hf-check' at $0.01/call.",
+    "",
+    "The slug still carries the project's former name. update_workflow_listing",
+    "exposes no slug field, so a listed workflow's public URL is fixed at listing",
+    "time; the alternative was to unlist and re-list, which would have discarded",
+    "the listing's history for a cosmetic gain. The display name is mutable and",
+    "was updated.",
     "",
     "Health factor and liquidation risk for any Aave V3 position on Ethereum",
     "mainnet, sold to other agents so they need not integrate Aave themselves.",
@@ -23,7 +29,7 @@
     "category": "defi",
     "chain": "1"
   },
-  "name": "GasGuard: hf-check",
+  "name": "Bulwark: hf-check",
   "nodes": [
     {
       "id": "trigger-1",

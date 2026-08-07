@@ -1,5 +1,5 @@
 /**
- * GasGuard dashboard.
+ * Bulwark dashboard.
  *
  *   npm run dashboard        # then open http://localhost:8080
  *
@@ -60,5 +60,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`GasGuard dashboard on http://localhost:${PORT}`);
+  console.log(`Bulwark dashboard on http://localhost:${PORT}`);
 });

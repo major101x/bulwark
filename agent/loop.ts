@@ -1,5 +1,5 @@
 /**
- * GasGuard agent loop.
+ * Bulwark agent loop.
  *
  *   npm run agent              # DRY_RUN=1 by default, decides but executes nothing
  *   DRY_RUN=0 npm run agent    # live
@@ -200,7 +200,7 @@ async function tick(): Promise<number> {
 }
 
 console.log(
-  `GasGuard loop watching ${WATCHED}\n` +
+  `Bulwark loop watching ${WATCHED}\n` +
     `  keeper ${KEEPER}\n` +
     `  ${DRY_RUN ? 'DRY_RUN is ON, nothing will execute' : 'LIVE MODE'}\n` +
     `  CRITICAL is handled server-side by the hf-watch-critical workflow\n`,

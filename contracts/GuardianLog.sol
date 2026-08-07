@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title GuardianLog
-/// @notice Append-only public record of every decision GasGuard makes.
+/// @notice Append-only public record of every decision Bulwark makes.
 /// @dev    Deliberately storage-free: the entire record lives in event logs, so
 ///         an attestation costs only the base transaction plus log data. That
 ///         matters because these run on Ethereum mainnet under KeeperHub's gas

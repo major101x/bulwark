@@ -11,7 +11,12 @@
     "predicted with getDeployed() before deploying.",
     "",
     "Verified after deployment: on-chain runtime bytecode is byte-identical to",
-    "the local compile (824 bytes)."
+    "the local compile (824 bytes).",
+    "",
+    "saltPreimage still reads 'gasguard', the project's name at deploy time.",
+    "It is not a label: the deployed address derives from keccak256 of that",
+    "exact string, so rewriting it to match the current name would make this",
+    "record describe an address that was never deployed."
   ],
   "chainId": 1,
   "address": "0x06D8C09B5dbb9f9Bb96B7B20a351cdC5e16644D3",

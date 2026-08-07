@@ -1,4 +1,4 @@
-# GasGuard
+# Bulwark
 
 **A liquidation-defense keeper that executes onchain through KeeperHub, and pays for its own gas.**
 
@@ -57,7 +57,7 @@ may **liquidate** them: repay part of the debt, seize collateral at a discount, 
 the borrower eats a 5-10% penalty.
 
 Spotting the danger is easy. Landing the rescue transaction is not: it has to execute
-at 3am, during a gas spike, without being front-run. GasGuard watches positions,
+at 3am, during a gas spike, without being front-run. Bulwark watches positions,
 decides whether a rescue is economically worth its gas, and executes through KeeperHub.
 
 It also sells its own monitoring on the KeeperHub marketplace at ~$0.01 a call, so its
@@ -65,7 +65,7 @@ earnings fund its executions.
 
 ## The interesting part: knowing when *not* to act
 
-Any agent can fire a repay when a health factor dips. GasGuard computes whether the
+Any agent can fire a repay when a health factor dips. Bulwark computes whether the
 rescue is worth the gas, and declines when it is not:
 
 ```
@@ -140,7 +140,7 @@ code verified byte-identical to the local compile.
 | `hf-watch-critical` workflow | done, enabled, both branches verified |
 | `GuardianLog` on mainnet | deployed, attestations landing |
 | **Agent loop (ARMED tier)** | **done: observes, decides, executes, attests, unattended** |
-| Marketplace listing | done, [`gasguard-aave-hf-check`](https://app.keeperhub.com) at $0.01/call |
+| Marketplace listing | done, [`gasguard-aave-hf-check`](https://app.keeperhub.com) at $0.01/call (slug predates the rename and is fixed once listed) |
 | Chaos harness | runnable end to end, 2 of 3 scenarios differentiate ([RESULTS](./chaos/RESULTS.md)) |
 | KeeperHub REST paths | verified by probing (`agent/executor.ts`) |
 | Marketplace revenue loop | blocked: settlement is mainnet-only, needs real USDC |
