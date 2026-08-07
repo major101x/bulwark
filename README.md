@@ -176,6 +176,7 @@ code verified byte-identical to the local compile.
 | KeeperHub REST paths | verified by probing (`agent/executor.ts`) |
 | Marketplace revenue loop | blocked: settlement is mainnet-only, needs real USDC |
 | Dashboard | done, serves both audit trails (`npm run dashboard`) |
+| Starter template | done, first transaction needs only an API key ([README](./starter-template/README.md)) |
 | Demo video | not started |
 
 The open questions this depended on (Aave V3 on Sepolia, mainnet gas sponsorship
@@ -227,6 +228,10 @@ workflows/    exported KeeperHub workflow JSON
 docs/         friction log (bounty input), architecture notes
 starter-template/  zero-to-first-transaction, for the onboarding bounty
 ```
+
+`starter-template/` is standalone: copy the folder out, `npm install`, and
+`npm run first-tx` lands a real transaction with nothing but an API key. No
+testnet funds, no wallet extension, no private key.
 
 ## License
 
