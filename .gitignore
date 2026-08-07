@@ -10,3 +10,7 @@ out/
 cache/
 data/
 .playwright-mcp/
+
+# Kept locally, deliberately out of the repo
+SPEC.md
+dashboard.png
