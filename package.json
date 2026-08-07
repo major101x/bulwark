@@ -22,7 +22,8 @@
     "chaos:unstick": "tsx scripts/unstick.ts",
     "agent:webhook": "tsx agent/index.ts",
     "dashboard": "tsx dashboard/server.ts",
-    "ledger:backfill": "tsx scripts/backfill-ledger.ts"
+    "ledger:backfill": "tsx scripts/backfill-ledger.ts",
+    "mint": "tsx starter-template/mint-test-tokens.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

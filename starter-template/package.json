@@ -1,0 +1,20 @@
+{
+  "name": "keeperhub-first-tx",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero to your first KeeperHub-executed transaction, in one command and with no testnet funds.",
+  "scripts": {
+    "first-tx": "tsx first-tx.ts",
+    "mint": "tsx mint-test-tokens.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
