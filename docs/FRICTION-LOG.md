@@ -281,4 +281,46 @@ seller, and `search_workflows` is the only surface agents have.
 
 ---
 
+### 2026-08-07 The idempotency key is silently ignored in the request body
+
+**Doing:** Building the onboarding starter template, and demonstrating replay
+safety as part of it: submit a transfer twice with the same key, show that only
+one transaction exists.
+**Expected:** The documented behaviour. The MCP tool describes
+`idempotency_key` as "Retrying with the same key and arguments returns the
+original result instead of executing again, within a 24h window. Reusing a key
+with different arguments returns a 409 conflict."
+**Got:** Neither. Sending `idempotencyKey` in the JSON body, the natural
+camelCase translation of the MCP parameter, produced **two separate
+transactions with two different hashes**. Reusing the same key with a
+*different* amount returned `202` and executed a third time rather than the
+documented `409`.
+
+The key is read from an HTTP `Idempotency-Key` **header**. Sent there it works
+exactly as documented: the replay echoes the original `executionId` and
+`transactionHash` and adds `idempotentReplay: true`. The body field is not
+rejected, not warned about, just dropped.
+
+**Cost:** ~20 minutes and three unintended Sepolia transactions. The real cost
+was already banked, though: `agent/executor.ts` had been sending the key in the
+body for days, with a comment explaining that this was "the difference between
+a retry and a double spend when our process restarts mid-rescue". That
+protection never existed. On a keeper that repays debt, a retry after a
+timeout spends the user's money twice.
+
+**Fix:** Two things, either of which would have been enough.
+1. Reject a body-level `idempotencyKey` with a 400 naming the header. An
+   unknown field in a *safety* parameter should never be silently discarded.
+2. Make the MCP tool's parameter description say "sent as the Idempotency-Key
+   HTTP header", since every REST caller reaches the API through that schema
+   and the snake_case-to-camelCase mapping holds for every other field.
+
+**Bounty candidate:** yes, and I would rank it above the search one. The others
+cost a developer time; this one silently disarms the mechanism whose entire
+purpose is preventing duplicate spends, and it fails in the direction of
+executing more than you asked for. It is also invisible in testing: everything
+returns 202 and looks like it worked.
+
+---
+
 <!-- Add entries below as they happen. Do not batch them up. -->
