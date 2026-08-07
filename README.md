@@ -83,22 +83,53 @@ which lines up with how often collateral actually drops 9% in 24 hours.
 
 ## Architecture
 
+Two independent defenders watch one position. Either can act alone.
+
+```mermaid
+flowchart LR
+    POS[("Aave V3 position<br/>Sepolia")]
+
+    subgraph KH["Inside KeeperHub: owns CRITICAL, needs no local process"]
+        direction TB
+        TRIG["Block trigger<br/>every 50 blocks"] --> READ["Read<br/>health factor"] --> COND{"HF below<br/>1.05?"}
+        COND -- "no" --> STOP["Stop<br/>zero transactions"]
+        COND -- "yes" --> FIX["Approve LINK,<br/>supply 7 LINK<br/>onBehalfOf position"] --> VERIFY["Re-read HF<br/>to confirm recovery"]
+    end
+
+    subgraph AGENT["Local agent loop: owns ARMED, where declining is the point"]
+        direction TB
+        OBS["Observe over<br/>plain RPC"] --> MODEL["P(liquidation) by first passage,<br/>expected loss vs cheapest rescue"] --> DEC{"expected loss<br/>above 3x<br/>rescue cost?"}
+        DEC -- "no" --> HOLD["HOLD<br/>gas not justified yet"]
+        DEC -- "yes" --> RESCUE["RESCUE via KeeperHub<br/>approve, then repay or supply"]
+    end
+
+    LOG[["GuardianLog<br/>Ethereum mainnet"]]
+    LEDGER[/"attestations.jsonl"/]
+    DASH["Dashboard"]
+
+    POS --> TRIG
+    POS --> OBS
+    FIX -. "tops up collateral" .-> POS
+    RESCUE -. "repays or tops up" .-> POS
+
+    VERIFY --> LOG
+    HOLD --> LOG
+    RESCUE --> LOG
+    LOG --> LEDGER --> DASH
 ```
-Aave position (Sepolia)
-   │
-   ├─ hf-watch workflow (KeeperHub, every N blocks)
-   │     └─ POST /evaluate ──▶ agent: classify → price → decide
-   │                              │
-   │                              ├─ RESCUE ──▶ rescue workflow (KeeperHub)
-   │                              │              approve → repay → re-read HF → verify
-   │                              └─ HOLD
-   │                                     │
-   └────────────────────── attest to GuardianLog on Ethereum mainnet ◀┘
-                           (gas sponsored, zero capital, holds logged too)
-```
+
+The split is deliberate. CRITICAL lives server-side because a keeper that stops
+defending when your laptop sleeps is not a keeper. ARMED lives in the agent
+because the first-passage model and the cost/benefit comparison do not fit in a
+condition node.
 
 Both rescues *and* holds are attested. A keeper that only records its successes is not
 an audit trail, and the declined rescues are the interesting judgment calls.
+
+The ledger exists because free RPC tiers stop serving `eth_getLogs` past a few
+hundred blocks, so an attestation not written down as it lands becomes
+unreadable within about half an hour. The chain stays the authority; the ledger
+is just the index.
 
 ## Status
 
