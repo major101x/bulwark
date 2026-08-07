@@ -144,7 +144,7 @@ code verified byte-identical to the local compile.
 | Chaos harness | runnable end to end, 2 of 3 scenarios differentiate ([RESULTS](./chaos/RESULTS.md)) |
 | KeeperHub REST paths | verified by probing (`agent/executor.ts`) |
 | Marketplace revenue loop | blocked: settlement is mainnet-only, needs real USDC |
-| Dashboard | not started |
+| Dashboard | done, serves both audit trails (`npm run dashboard`) |
 | Demo video | not started |
 
 Open questions are resolved in [SPEC.md §14](./SPEC.md).
