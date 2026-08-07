@@ -144,13 +144,25 @@ export class KeeperHubBackend implements ExecutionBackend {
    * Note there is no `v1` segment, the body is camelCase (the MCP tool takes
    * snake_case for the same fields), and `functionArgs` and `abi` must be JSON
    * *strings* rather than JSON values.
+   *
+   * The idempotency key travels as an HTTP header, NOT as a body field. A body
+   * `idempotencyKey` is accepted and silently ignored: the call executes again
+   * and returns a fresh transaction hash. Verified 2026-08-07 by replaying the
+   * same key both ways. A correct replay echoes the original executionId and
+   * hash with `idempotentReplay: true`.
    */
-  private async request<T>(path: string, body?: unknown, method = 'POST'): Promise<T> {
+  private async request<T>(
+    path: string,
+    body?: unknown,
+    method = 'POST',
+    idempotencyKey?: string,
+  ): Promise<T> {
     const res = await fetch(`${this.config.apiUrl}${path}`, {
       method,
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${this.config.apiKey}`,
+        ...(idempotencyKey === undefined ? {} : { 'Idempotency-Key': idempotencyKey }),
       },
       // bigint is the natural type for token amounts but JSON.stringify throws
       // on it, so encode as decimal strings, which is what the API wants.
@@ -208,11 +220,12 @@ export class KeeperHubBackend implements ExecutionBackend {
             typeof v === 'bigint' ? v.toString() : v,
           ),
           abi: req.abi === undefined ? undefined : JSON.stringify(req.abi),
-          idempotencyKey: req.idempotencyKey,
           ...(req.gasPolicy?.multipliers.at(-1) !== undefined
             ? { priorityFeeGwei: String(req.gasPolicy.multipliers.at(-1)) }
             : {}),
         },
+        'POST',
+        req.idempotencyKey,
         ),
       );
       const latencyMs = Date.now() - started;
@@ -256,11 +269,17 @@ export class KeeperHubBackend implements ExecutionBackend {
   async executeProtocolAction(
     actionType: string,
     params: Record<string, string>,
+    idempotencyKey?: string,
   ): Promise<ExecutionResult> {
     const started = Date.now();
     try {
       const res = await this.withRetry(() =>
-        this.request<ProtocolActionResponse>(`/api/execute/${actionType}`, params),
+        this.request<ProtocolActionResponse>(
+          `/api/execute/${actionType}`,
+          params,
+          'POST',
+          idempotencyKey,
+        ),
       );
       return {
         ok: res.success === true && res.executedCall?.reverted !== true,
