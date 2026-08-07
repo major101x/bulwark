@@ -4,7 +4,7 @@ Running record of everything confusing, broken, or slower than it should have
 been while building on KeeperHub. **Write entries while confused, not after.**
 Once something makes sense you cannot reconstruct why it did not.
 
-This feeds the Best Onboarding UX bounty (SPEC.md §12): the worst item becomes a
+This feeds the Best Onboarding UX bounty: the worst item becomes a
 PR, the rest become a teardown.
 
 ## Format

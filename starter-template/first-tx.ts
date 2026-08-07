@@ -1,7 +1,7 @@
 /**
  * Zero to your first KeeperHub-executed transaction.
  *
- * This is the onboarding-bounty deliverable (SPEC.md §12). The goal is that a
+ * This is the onboarding-bounty deliverable. The goal is that a
  * stranger with no web3 background can run one command and see a transaction
  * land, with every prerequisite checked and every failure explained in terms of
  * what to do next rather than what went wrong internally.
@@ -9,7 +9,7 @@
  * Deliberately dependency-light and single-file so it can be read top to bottom.
  *
  * STATUS: preflight checks are real and runnable today. The execution step is
- * stubbed until the KeeperHub API shapes are verified (SPEC.md §14 question 1).
+ * stubbed pending a rewrite against the verified shapes in agent/keeperhub-types.ts.
  */
 
 import 'dotenv/config';
@@ -78,8 +78,7 @@ async function main(): Promise<void> {
   }
 
   console.log('\n  ⛔ Execution step not implemented yet.');
-  console.log('     Blocked on verifying the KeeperHub execute endpoint shape');
-  console.log('     (SPEC.md §14, question 1). Preflight above is live and correct.\n');
+  console.log('     Preflight above is live and correct.\n');
   process.exit(1);
 }
 

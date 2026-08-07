@@ -2,7 +2,7 @@
 
 **A liquidation-defense keeper that executes onchain through KeeperHub, and pays for its own gas.**
 
-Built for the KeeperHub *Agents Onchain* hackathon. Full design in [SPEC.md](./SPEC.md).
+Built for the KeeperHub *Agents Onchain* hackathon.
 
 ---
 
@@ -178,7 +178,9 @@ code verified byte-identical to the local compile.
 | Dashboard | done, serves both audit trails (`npm run dashboard`) |
 | Demo video | not started |
 
-Open questions are resolved in [SPEC.md §14](./SPEC.md).
+The open questions this depended on (Aave V3 on Sepolia, mainnet gas sponsorship
+for arbitrary calls, testnet marketplace settlement, free-tier quota) were
+answered by the KeeperHub team on Discord and are reflected throughout.
 
 ### How the work is split
 
@@ -190,8 +192,6 @@ passing gas spike is not a reason to let a position liquidate.
 The **agent** owns the ARMED tier, where the interesting behaviour is declining to
 act. That reasoning is too involved for condition nodes and it is where the
 cost/benefit model earns its place.
-
-Open questions are resolved in [SPEC.md §14](./SPEC.md).
 
 ## Running what exists
 

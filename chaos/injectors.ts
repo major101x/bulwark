@@ -5,7 +5,7 @@
  * production. The naive backend has no defence against any of them; KeeperHub
  * claims a defence for most. The harness measures the gap.
  *
- * See SPEC.md §7 for the table these implement.
+ * Results and method in chaos/RESULTS.md.
  */
 
 import type { ExecutionRequest } from '../agent/executor.ts';
