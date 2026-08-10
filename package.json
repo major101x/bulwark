@@ -23,7 +23,8 @@
     "agent:webhook": "tsx agent/index.ts",
     "dashboard": "tsx dashboard/server.ts",
     "ledger:backfill": "tsx scripts/backfill-ledger.ts",
-    "mint": "tsx starter-template/mint-test-tokens.ts"
+    "mint": "tsx starter-template/mint-test-tokens.ts",
+    "site:build": "tsx site/build.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
