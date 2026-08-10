@@ -17,3 +17,7 @@ dashboard.png
 
 # Generated snapshot page
 site/dist/
+
+# Local design references and stray captures, never committed
+*.webp
+mermaid-check.png
