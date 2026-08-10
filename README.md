@@ -4,6 +4,11 @@
 
 Built for the KeeperHub *Agents Onchain* hackathon.
 
+**[Live snapshot →](https://major101x.github.io/bulwark/)** the position, the decision
+trail on mainnet, and the KeeperHub execution history, every row linking to a block
+explorer. It is a snapshot rather than a live page, and says so: the real dashboard
+holds an API key and so cannot be served publicly.
+
 ---
 
 ## Reliability scorecard
@@ -180,6 +185,7 @@ code verified byte-identical to the local compile.
 | KeeperHub REST paths | verified by probing (`agent/executor.ts`) |
 | Marketplace revenue loop | built, never exercised: settlement is mainnet-only and this build stayed at zero capital |
 | Dashboard | done, serves both audit trails (`npm run dashboard`) |
+| Public snapshot page | done, [major101x.github.io/bulwark](https://major101x.github.io/bulwark/) (`npm run site:build`) |
 | Starter template | done, first transaction needs only an API key ([README](./starter-template/README.md)) |
 | Demo video | not started |
 
@@ -230,6 +236,7 @@ chaos/        failure injectors and the reliability harness
 contracts/    GuardianLog.sol, the onchain audit trail
 workflows/    exported KeeperHub workflow JSON
 docs/         friction log (bounty input), architecture notes
+site/          generator for the public snapshot page
 starter-template/  zero-to-first-transaction, for the onboarding bounty
 ```
 
