@@ -1,6 +1,6 @@
 # Bulwark
 
-**A liquidation-defense keeper that executes onchain through KeeperHub, and pays for its own gas.**
+**A liquidation-defense keeper that executes onchain through KeeperHub, and declines to act when the gas is not worth it.**
 
 Built for the KeeperHub *Agents Onchain* hackathon.
 
@@ -60,8 +60,12 @@ Spotting the danger is easy. Landing the rescue transaction is not: it has to ex
 at 3am, during a gas spike, without being front-run. Bulwark watches positions,
 decides whether a rescue is economically worth its gas, and executes through KeeperHub.
 
-It also sells its own monitoring on the KeeperHub marketplace at ~$0.01 a call, so its
-earnings fund its executions.
+Its monitoring is also listed for sale on the KeeperHub marketplace at $0.01 a call,
+the first half of a loop where the agent's earnings pay for its own executions. The
+listing is live and priced; nothing has settled through it. Marketplace settlement is
+mainnet-only today, so closing that loop needs real USDC on Base rather than testnet
+funds, and this build stayed at zero capital deliberately. Treat the revenue side as
+built and unexercised, not as demonstrated.
 
 ## The interesting part: knowing when *not* to act
 
@@ -174,7 +178,7 @@ code verified byte-identical to the local compile.
 | Marketplace listing | done, [`gasguard-aave-hf-check`](https://app.keeperhub.com) at $0.01/call (slug predates the rename and is fixed once listed) |
 | Chaos harness | runnable end to end, 2 of 3 scenarios differentiate ([RESULTS](./chaos/RESULTS.md)) |
 | KeeperHub REST paths | verified by probing (`agent/executor.ts`) |
-| Marketplace revenue loop | blocked: settlement is mainnet-only, needs real USDC |
+| Marketplace revenue loop | built, never exercised: settlement is mainnet-only and this build stayed at zero capital |
 | Dashboard | done, serves both audit trails (`npm run dashboard`) |
 | Starter template | done, first transaction needs only an API key ([README](./starter-template/README.md)) |
 | Demo video | not started |

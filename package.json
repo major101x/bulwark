@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Liquidation-defense keeper that executes onchain through KeeperHub and funds its own gas via x402",
+  "description": "Liquidation-defense keeper that executes onchain through KeeperHub, and declines to act when the gas is not worth it",
   "engines": {
     "node": ">=22"
   },
