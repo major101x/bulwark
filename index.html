@@ -336,7 +336,7 @@ section, #top { scroll-margin-top:76px; }
   <div class="notice">
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
-      <b>This is a static snapshot</b>, taken 2026-08-11 13:08 UTC. It does not update.
+      <b>This is a static snapshot</b>, taken 2026-08-11 13:28 UTC. It does not update.
       The live dashboard is a local server (<code>npm run dashboard</code>): it reads a
       KeeperHub API key, so it cannot be served publicly without handing that key to the
       browser. Every row below links to a block explorer, where the record is live and
@@ -385,13 +385,13 @@ section, #top { scroll-margin-top:76px; }
     <div class="cards">
       <div class="card feature">
         <h3>Health factor</h3>
-        <div class="hero-num">1.1565</div>
+        <div class="hero-num">1.1566</div>
         <div style="margin-top:12px"><span class="pill tier-WATCH">WATCH</span></div>
       </div>
       <div class="card">
         <h3>Position</h3>
-        <div class="row"><span>collateral</span><b>$883.69</b></div>
-        <div class="row"><span>debt</span><b>$573.09</b></div>
+        <div class="row"><span>collateral</span><b>$883.77</b></div>
+        <div class="row"><span>debt</span><b>$573.10</b></div>
         <div class="row"><span>liq. threshold</span><b>75%</b></div>
       </div>
       <div class="card">
@@ -402,12 +402,12 @@ section, #top { scroll-margin-top:76px; }
       </div>
       <div class="card">
         <h3>Economics</h3>
-        <div class="row"><span>P(liquidation)</span><b>1.68%</b></div>
+        <div class="row"><span>P(liquidation)</span><b>1.67%</b></div>
         <div class="row"><span>expected loss</span><b>$0.24</b></div>
-        <div class="row"><span>rescue cost</span><b>$1.15</b></div>
+        <div class="row"><span>rescue cost</span><b>$1.18</b></div>
       </div>
     </div>
-    <div class="rationale">HF 1.156 → WATCH. No action needed.</div>
+    <div class="rationale">HF 1.157 → WATCH. No action needed.</div>
   </div>
 </section>
 
@@ -492,6 +492,20 @@ section, #top { scroll-margin-top:76px; }
         </tr></thead>
         <tbody>
 <tr>
+      <td class="dim nowrap mono">2026-08-11 13:21 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
+      <td class="dim nowrap mono">2026-08-11 13:11 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
       <td class="dim nowrap mono">2026-08-11 13:00 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
@@ -514,20 +528,6 @@ section, #top { scroll-margin-top:76px; }
     </tr>
 <tr>
       <td class="dim nowrap mono">2026-08-11 12:29 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 12:19 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 12:08 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
@@ -564,9 +564,8 @@ section, #top { scroll-margin-top:76px; }
   <div class="wrap foot-in">
     <div>
       Built for the KeeperHub <em>Agents Onchain</em> hackathon.<br />
-      Watching <code>0x5Fd5a59693CFC88CC65692751bE547a3fc66992b</code> on Sepolia.
+      Watching <a class="link mono" href="https://sepolia.etherscan.io/address/0x5Fd5a59693CFC88CC65692751bE547a3fc66992b" target="_blank" rel="noopener">0x5Fd5a59693CFC88CC65692751bE547a3fc66992b</a> on Sepolia.
     </div>
-    <div>Regenerate with <code>npm run site:build</code></div>
   </div>
 </footer>
 
