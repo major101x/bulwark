@@ -34,6 +34,11 @@
  *   - Numbers are sans with tabular figures; monospace is reserved for hashes
  *     and timestamps. Setting every figure in mono made a truncated tx hash
  *     carry the same weight as a health factor.
+ *   - Monospace is for machine output only: hashes, timestamps, verbatim agent
+ *     log lines, shell commands. It is deliberately NOT a label face. Uppercase
+ *     letterspaced mono micro-labels over section headings and table columns
+ *     are a signature of generated crypto pages, and using the second typeface
+ *     as decoration is what made this one read that way.
  *   - Section rhythm and card widths vary by importance rather than repeating
  *     one template four times.
  */
@@ -272,12 +277,6 @@ section { padding-top:var(--s9); }
 #runs { padding-top:var(--s7); }
 
 .sec-head { border-top:1px solid var(--rule); padding-top:var(--s5); margin-bottom:var(--s6); }
-/* one micro-label recipe, shared with the table headers, so the page has a
-   single voice for small type */
-.label {
-  font-family:var(--mono); font-size:var(--t-xs); letter-spacing:.08em;
-  text-transform:uppercase; color:var(--dimmer); margin-bottom:var(--s3);
-}
 h2 {
   font-size:clamp(26px,1.5vw + 20px,36px); line-height:1.15; letter-spacing:-.03em;
   font-weight:700; margin:0 0 var(--s3); max-width:26ch; text-wrap:balance;
@@ -309,7 +308,7 @@ h2 {
 }
 .card.feature { display:flex; flex-direction:column; justify-content:center; }
 .card h3 {
-  font-family:var(--mono); font-size:var(--t-xs); font-weight:600;
+  font-size:var(--t-xs); font-weight:600;
   text-transform:uppercase; letter-spacing:.08em; color:var(--dimmer);
   margin:0 0 var(--s3);
 }
@@ -353,7 +352,7 @@ h2 {
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
 th {
-  color:var(--dimmer); font-family:var(--mono); font-weight:600; font-size:var(--t-xs);
+  color:var(--dimmer); font-weight:600; font-size:var(--t-xs);
   letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
 }
 th.num { text-align:right; }
@@ -467,7 +466,6 @@ function render(s: DashboardState): string {
 <section id="reliability">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Measured, not claimed</div>
       <h2>Landing the transaction is the hard part.</h2>
       <p class="sub">
         Spotting a position in danger is easy. Getting the rescue mined at 3am during a
@@ -500,7 +498,6 @@ function render(s: DashboardState): string {
 <section id="position">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">At snapshot time</div>
       <h2>The position, and what the agent decided.</h2>
     </div>
     <div class="cards">
@@ -535,7 +532,6 @@ function render(s: DashboardState): string {
 <section id="trail">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Public record</div>
       <h2>Every decision, on Ethereum mainnet.</h2>
       <p class="sub">
         Holds are attested as well as rescues. The declined rescues are the interesting
@@ -565,7 +561,6 @@ ${attestationRows(s)}
 <section id="runs">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Running unattended</div>
       <h2>The watcher, still firing.</h2>
       <p class="sub">
         A KeeperHub workflow owns the CRITICAL tier server-side, so the position stays
