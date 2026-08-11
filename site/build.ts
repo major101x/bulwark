@@ -489,7 +489,8 @@ section, #top { scroll-margin-top:76px; }
  * rather than filled so they stay structure instead of silhouette.
  *
  * They turn at different speeds and in opposite directions, so the pair never
- * settles into a synchronised pattern that would read as a loop.
+ * settles into a synchronised pattern that would read as a loop. The periods
+ * stay coprime-ish for the same reason.
  */
 .bg-mark {
   position:fixed; width:74vmin; height:74vmin; z-index:0; pointer-events:none;
@@ -503,9 +504,9 @@ section, #top { scroll-margin-top:76px; }
 .bg-mark svg {
   width:100%; height:100%; display:block;
   color:rgba(255,255,255,.085);
-  animation:turn 150s linear infinite; transform-origin:50% 50%;
+  animation:turn 88s linear infinite; transform-origin:50% 50%;
 }
-.bg-mark.tl svg { animation-duration:196s; animation-direction:reverse; color:rgba(255,255,255,.07); }
+.bg-mark.tl svg { animation-duration:115s; animation-direction:reverse; color:rgba(255,255,255,.07); }
 @keyframes turn { to { transform:rotate(360deg); } }
 @media (max-width:760px){
   .bg-mark { width:86vmin; height:86vmin; }
