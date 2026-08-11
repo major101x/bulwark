@@ -102,6 +102,12 @@ const FONT_FACES = FONTS.map(
 const MARK_PATH =
   'M3.8 4.8H7.8V8.6H10V4.8H14V8.6H16.2V4.8H20.2V20.2H3.8V4.8Z';
 
+/** Outlined mark for the fixed background. Hairline at any scale. */
+const BG_MARK =
+  '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+  `<path d="${MARK_PATH}" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/>` +
+  '</svg>';
+
 /** Inline mark for the nav. currentColor, so it inherits the text ink. */
 const NAV_MARK =
   '<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
@@ -121,24 +127,6 @@ const FAVICON_SVG =
   '</svg>';
 
 const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`;
-
-/**
- * Hero background: a health factor drifting down toward the liquidation
- * threshold, and the rescue that catches it.
- *
- * Drawn from the shape of the real thing rather than invented: the dashed red
- * line is HF 1.0, the point at which anyone may liquidate the position, and the
- * dot is the top-up that lifted it back. An abstract shape would occupy the
- * same space and say nothing.
- */
-const HERO_TRACE = `
-    <svg class="trace" viewBox="0 0 320 180" fill="none" aria-hidden="true">
-      <line class="thresh" x1="18" y1="120" x2="316" y2="120" />
-      <text class="lbl" x="18" y="112">HF 1.00 LIQUIDATION</text>
-      <path class="hf" d="M18 44C54 50 84 64 110 86 130 104 148 117 168 118 186 119 196 106 214 78 232 52 260 40 300 36" />
-      <circle class="rescue" cx="168" cy="118" r="4.5" />
-      <text class="lbl" x="150" y="140">RESCUE</text>
-    </svg>`;
 
 const esc = (s: unknown): string =>
   String(s ?? '').replace(
@@ -492,6 +480,25 @@ section, #top { scroll-margin-top:76px; }
  * landing page reaches for.
  */
 .bg-grain, .bg-grid { position:fixed; inset:0; pointer-events:none; z-index:0; }
+
+/*
+ * The mark at architectural scale, fixed and slowly turning, running off the
+ * right edge. Fixed rather than scrolled so it behaves like the building the
+ * page is printed on rather than an element in the layout, and outlined rather
+ * than filled so it stays a structure instead of a silhouette.
+ */
+.bg-mark {
+  position:fixed; right:-15vmin; top:50%; transform:translateY(-50%);
+  width:74vmin; height:74vmin; z-index:0; pointer-events:none;
+}
+.bg-mark svg {
+  width:100%; height:100%; display:block;
+  color:rgba(255,255,255,.085);
+  animation:turn 150s linear infinite; transform-origin:50% 50%;
+}
+@keyframes turn { to { transform:rotate(360deg); } }
+@media (max-width:760px){ .bg-mark { right:-32vmin; width:88vmin; height:88vmin; } }
+@media (prefers-reduced-motion: reduce){ .bg-mark svg { animation:none; } }
 .bg-grain {
   opacity:.055;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -506,33 +513,6 @@ section, #top { scroll-margin-top:76px; }
 }
 /* everything real sits above the ground */
 nav, header, section, footer, .wrap { position:relative; z-index:1; }
-
-/* ---------- hero trace ---------- */
-/*
- * A health factor falling toward the liquidation threshold and being caught.
- * It is the product's entire thesis drawn once, so it earns the space that an
- * abstract shape would waste.
- */
-.trace {
-  position:absolute; right:-8px; top:56%; transform:translateY(-34%);
-  width:min(38%,410px); height:auto; pointer-events:none; z-index:0;
-  color:var(--text); opacity:.55;
-}
-/* text sits above the trace, never behind it */
-.hero h1, .hero .lede, .hero .cta { position:relative; z-index:1; }
-@media (max-width:1100px){ .trace { display:none; } }
-.trace .axis { stroke:rgba(255,255,255,.10); stroke-width:1; }
-.trace .thresh { stroke:var(--bad); stroke-width:1.25; stroke-dasharray:5 5; opacity:.75; }
-.trace .hf {
-  fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
-  stroke-dasharray:1000; stroke-dashoffset:1000;
-}
-.trace .rescue { fill:var(--ok); opacity:0; }
-.trace .lbl { fill:var(--dimmer); font-size:9px; font-family:var(--mono); letter-spacing:.06em; }
-.js .trace .hf { animation:draw 2.1s cubic-bezier(.4,.5,.2,1) .25s forwards; }
-.js .trace .rescue { animation:pop .5s ease 2.1s forwards; }
-@keyframes draw { to { stroke-dashoffset:0; } }
-@keyframes pop { to { opacity:1; } }
 
 /* ---------- entrances ---------- */
 /*
@@ -549,8 +529,6 @@ nav, header, section, footer, .wrap { position:relative; z-index:1; }
 
 @media (prefers-reduced-motion: reduce) {
   .js [data-reveal], .js tbody tr { opacity:1 !important; transform:none !important; transition:none !important; }
-  .js .trace .hf { animation:none; stroke-dashoffset:0; }
-  .js .trace .rescue { animation:none; opacity:1; }
 }
 
 /* ---------- footer ---------- */
@@ -600,6 +578,7 @@ function render(s: DashboardState): string {
 
 <div class="bg-grain" aria-hidden="true"></div>
 <div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-mark" aria-hidden="true">${BG_MARK}</div>
 
 <nav>
   <div class="wrap nav-in">
@@ -616,7 +595,6 @@ function render(s: DashboardState): string {
 
 <header class="hero" id="top">
   <div class="wrap">
-    ${HERO_TRACE}
     <h1 data-reveal>Liquidation defense that knows when not to act.</h1>
     <p class="lede" data-reveal>
       A keeper that executes onchain through KeeperHub, prices every rescue against the
@@ -633,7 +611,7 @@ function render(s: DashboardState): string {
 <div class="wrap">
   <div class="stats" data-reveal>
     <div class="stat lead">
-      <div class="v">4/4</div>
+      <div class="v" data-count="4" data-tpl="{n}/4">4/4</div>
       <div class="k">landed under gas underpricing, against 0/4 for a naive baseline</div>
     </div>
     <div class="stat">
@@ -641,11 +619,11 @@ function render(s: DashboardState): string {
       <div class="k">capital used. Mainnet contract deployed on sponsored gas</div>
     </div>
     <div class="stat">
-      <div class="v">${s.totalWorkflowRuns}</div>
+      <div class="v" data-count="${s.totalWorkflowRuns}" data-tpl="{n}">${s.totalWorkflowRuns}</div>
       <div class="k">autonomous workflow runs, firing every 50 blocks</div>
     </div>
     <div class="stat">
-      <div class="v">${s.attestations.length}</div>
+      <div class="v" data-count="${s.attestations.length}" data-tpl="{n}">${s.attestations.length}</div>
       <div class="k">decisions attested on Ethereum mainnet</div>
     </div>
   </div>
@@ -861,6 +839,42 @@ document.documentElement.classList.add('js');
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
   targets.forEach(function (el) { io.observe(el); });
+  /*
+   * Figures count up once, when their row first appears. Values are already
+   * rendered in the HTML, so this only replaces text that is on the page: with
+   * no JS, or with reduced motion, the correct number is simply there.
+   */
+  function countUp(el) {
+    var target = parseFloat(el.getAttribute('data-count'));
+    var tpl = el.getAttribute('data-tpl') || '{n}';
+    if (!isFinite(target)) return;
+    if (reduce) { el.textContent = tpl.replace('{n}', String(target)); return; }
+    var dur = 900, t0 = performance.now();
+    (function step(now) {
+      var p = Math.min(1, (now - t0) / dur);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = tpl.replace('{n}', String(Math.round(target * eased)));
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  var statsRow = document.querySelector('.stats');
+  if (statsRow) {
+    var counted = false;
+    var runCount = function () {
+      if (counted) return;
+      counted = true;
+      statsRow.querySelectorAll('[data-count]').forEach(function (el, i) {
+        setTimeout(function () { countUp(el); }, 120 + i * 90);
+      });
+    };
+    if ('IntersectionObserver' in window) {
+      var co = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) { runCount(); co.disconnect(); } });
+      }, { threshold: 0.3 });
+      co.observe(statsRow);
+    } else { runCount(); }
+  }
+
   /* the hero is above the fold; do not wait for a scroll that never comes */
   requestAnimationFrame(function () {
     document.querySelectorAll('.hero [data-reveal]').forEach(function (el, i) {
