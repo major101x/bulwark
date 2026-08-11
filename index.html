@@ -155,12 +155,6 @@ section { padding-top:var(--s9); }
 #runs { padding-top:var(--s7); }
 
 .sec-head { border-top:1px solid var(--rule); padding-top:var(--s5); margin-bottom:var(--s6); }
-/* one micro-label recipe, shared with the table headers, so the page has a
-   single voice for small type */
-.label {
-  font-family:var(--mono); font-size:var(--t-xs); letter-spacing:.08em;
-  text-transform:uppercase; color:var(--dimmer); margin-bottom:var(--s3);
-}
 h2 {
   font-size:clamp(26px,1.5vw + 20px,36px); line-height:1.15; letter-spacing:-.03em;
   font-weight:700; margin:0 0 var(--s3); max-width:26ch; text-wrap:balance;
@@ -192,7 +186,7 @@ h2 {
 }
 .card.feature { display:flex; flex-direction:column; justify-content:center; }
 .card h3 {
-  font-family:var(--mono); font-size:var(--t-xs); font-weight:600;
+  font-size:var(--t-xs); font-weight:600;
   text-transform:uppercase; letter-spacing:.08em; color:var(--dimmer);
   margin:0 0 var(--s3);
 }
@@ -236,7 +230,7 @@ h2 {
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
 th {
-  color:var(--dimmer); font-family:var(--mono); font-weight:600; font-size:var(--t-xs);
+  color:var(--dimmer); font-weight:600; font-size:var(--t-xs);
   letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
 }
 th.num { text-align:right; }
@@ -322,7 +316,7 @@ section, #top { scroll-margin-top:76px; }
   <div class="notice">
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
-      <b>This is a static snapshot</b>, taken 2026-08-10 13:06 UTC. It does not update.
+      <b>This is a static snapshot</b>, taken 2026-08-11 11:23 UTC. It does not update.
       The live dashboard is a local server (<code>npm run dashboard</code>): it reads a
       KeeperHub API key, so it cannot be served publicly without handing that key to the
       browser. Every row below links to a block explorer, where the record is live and
@@ -334,7 +328,6 @@ section, #top { scroll-margin-top:76px; }
 <section id="reliability">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Measured, not claimed</div>
       <h2>Landing the transaction is the hard part.</h2>
       <p class="sub">
         Spotting a position in danger is easy. Getting the rescue mined at 3am during a
@@ -367,19 +360,18 @@ section, #top { scroll-margin-top:76px; }
 <section id="position">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">At snapshot time</div>
       <h2>The position, and what the agent decided.</h2>
     </div>
     <div class="cards">
       <div class="card feature">
         <h3>Health factor</h3>
-        <div class="hero-num">1.1512</div>
+        <div class="hero-num">1.1561</div>
         <div style="margin-top:12px"><span class="pill tier-WATCH">WATCH</span></div>
       </div>
       <div class="card">
         <h3>Position</h3>
-        <div class="row"><span>collateral</span><b>$878.11</b></div>
-        <div class="row"><span>debt</span><b>$572.08</b></div>
+        <div class="row"><span>collateral</span><b>$883.29</b></div>
+        <div class="row"><span>debt</span><b>$573.01</b></div>
         <div class="row"><span>liq. threshold</span><b>75%</b></div>
       </div>
       <div class="card">
@@ -390,19 +382,18 @@ section, #top { scroll-margin-top:76px; }
       </div>
       <div class="card">
         <h3>Economics</h3>
-        <div class="row"><span>P(liquidation)</span><b>2.02%</b></div>
-        <div class="row"><span>expected loss</span><b>$0.29</b></div>
-        <div class="row"><span>rescue cost</span><b>$1.13</b></div>
+        <div class="row"><span>P(liquidation)</span><b>1.70%</b></div>
+        <div class="row"><span>expected loss</span><b>$0.24</b></div>
+        <div class="row"><span>rescue cost</span><b>$1.25</b></div>
       </div>
     </div>
-    <div class="rationale">HF 1.151 → WATCH. No action needed.</div>
+    <div class="rationale">HF 1.156 → WATCH. No action needed.</div>
   </div>
 </section>
 
 <section id="trail">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Public record</div>
       <h2>Every decision, on Ethereum mainnet.</h2>
       <p class="sub">
         Holds are attested as well as rescues. The declined rescues are the interesting
@@ -467,7 +458,6 @@ section, #top { scroll-margin-top:76px; }
 <section id="runs">
   <div class="wrap">
     <div class="sec-head">
-      <div class="label">Running unattended</div>
       <h2>The watcher, still firing.</h2>
       <p class="sub">
         A KeeperHub workflow owns the CRITICAL tier server-side, so the position stays
@@ -482,42 +472,42 @@ section, #top { scroll-margin-top:76px; }
         </tr></thead>
         <tbody>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 13:06 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 11:17 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 12:55 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 11:07 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 12:45 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 10:57 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 12:35 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 10:46 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 12:25 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 10:36 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-10 12:15 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 10:26 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
