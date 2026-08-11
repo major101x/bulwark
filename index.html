@@ -304,7 +304,8 @@ section, #top { scroll-margin-top:76px; }
  * rather than filled so they stay structure instead of silhouette.
  *
  * They turn at different speeds and in opposite directions, so the pair never
- * settles into a synchronised pattern that would read as a loop.
+ * settles into a synchronised pattern that would read as a loop. The periods
+ * stay coprime-ish for the same reason.
  */
 .bg-mark {
   position:fixed; width:74vmin; height:74vmin; z-index:0; pointer-events:none;
@@ -318,9 +319,9 @@ section, #top { scroll-margin-top:76px; }
 .bg-mark svg {
   width:100%; height:100%; display:block;
   color:rgba(255,255,255,.085);
-  animation:turn 150s linear infinite; transform-origin:50% 50%;
+  animation:turn 88s linear infinite; transform-origin:50% 50%;
 }
-.bg-mark.tl svg { animation-duration:196s; animation-direction:reverse; color:rgba(255,255,255,.07); }
+.bg-mark.tl svg { animation-duration:115s; animation-direction:reverse; color:rgba(255,255,255,.07); }
 @keyframes turn { to { transform:rotate(360deg); } }
 @media (max-width:760px){
   .bg-mark { width:86vmin; height:86vmin; }
@@ -445,7 +446,7 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
   <div class="notice" data-reveal>
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
-      <b>This is a static snapshot</b>, taken 2026-08-11 15:13 UTC. It does not update.
+      <b>This is a static snapshot</b>, taken 2026-08-11 15:37 UTC. It does not update.
       The live dashboard is a local server (<code>npm run dashboard</code>): it reads a
       KeeperHub API key, so it cannot be served publicly without handing that key to the
       browser. Every row below links to a block explorer, where the record is live and
@@ -499,8 +500,8 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
       </div>
       <div class="card">
         <h3>Position</h3>
-        <div class="row"><span>collateral</span><b>$884.18</b></div>
-        <div class="row"><span>debt</span><b>$573.17</b></div>
+        <div class="row"><span>collateral</span><b>$884.27</b></div>
+        <div class="row"><span>debt</span><b>$573.19</b></div>
         <div class="row"><span>liq. threshold</span><b>75%</b></div>
       </div>
       <div class="card">
@@ -511,9 +512,9 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
       </div>
       <div class="card">
         <h3>Economics</h3>
-        <div class="row"><span>P(liquidation)</span><b>1.65%</b></div>
+        <div class="row"><span>P(liquidation)</span><b>1.64%</b></div>
         <div class="row"><span>expected loss</span><b>$0.24</b></div>
-        <div class="row"><span>rescue cost</span><b>$1.16</b></div>
+        <div class="row"><span>rescue cost</span><b>$1.25</b></div>
       </div>
     </div>
     <div class="rationale">HF 1.157 → WATCH. No action needed.</div>
@@ -601,6 +602,20 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
         </tr></thead>
         <tbody>
 <tr>
+      <td class="dim nowrap mono">2026-08-11 15:26 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
+      <td class="dim nowrap mono">2026-08-11 15:16 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
       <td class="dim nowrap mono">2026-08-11 15:06 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
@@ -623,20 +638,6 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
     </tr>
 <tr>
       <td class="dim nowrap mono">2026-08-11 14:34 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 14:24 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 14:13 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
@@ -696,7 +697,7 @@ footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var
   </div>
   <div class="wrap foot-base">
     <span>Built for KeeperHub.</span>
-    <span>Snapshot 2026-08-11 15:13 UTC</span>
+    <span>Snapshot 2026-08-11 15:37 UTC</span>
   </div>
 </footer>
 
