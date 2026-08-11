@@ -122,6 +122,24 @@ const FAVICON_SVG =
 
 const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`;
 
+/**
+ * Hero background: a health factor drifting down toward the liquidation
+ * threshold, and the rescue that catches it.
+ *
+ * Drawn from the shape of the real thing rather than invented: the dashed red
+ * line is HF 1.0, the point at which anyone may liquidate the position, and the
+ * dot is the top-up that lifted it back. An abstract shape would occupy the
+ * same space and say nothing.
+ */
+const HERO_TRACE = `
+    <svg class="trace" viewBox="0 0 320 180" fill="none" aria-hidden="true">
+      <line class="thresh" x1="18" y1="120" x2="316" y2="120" />
+      <text class="lbl" x="18" y="112">HF 1.00 LIQUIDATION</text>
+      <path class="hf" d="M18 44C54 50 84 64 110 86 130 104 148 117 168 118 186 119 196 106 214 78 232 52 260 40 300 36" />
+      <circle class="rescue" cx="168" cy="118" r="4.5" />
+      <text class="lbl" x="150" y="140">RESCUE</text>
+    </svg>`;
+
 const esc = (s: unknown): string =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -252,6 +270,10 @@ a { color:inherit; text-decoration:none; }
   text-underline-offset:.18em; text-decoration-color:rgba(255,255,255,.32);
 }
 .link:hover { text-decoration-color:var(--text); }
+/* A 42 character address has no break opportunity, so on a narrow screen it
+   pushes its container wider than the viewport. Grid and flex children also
+   default to min-width:auto, which stops them shrinking below that. */
+.link.mono { overflow-wrap:anywhere; }
 
 /* Family only. Sizing mono in em is a trap: inside a table cell the em
    resolves against the inherited body size, not the cell's, so the hashes came
@@ -460,6 +482,102 @@ section, #top { scroll-margin-top:76px; }
 @media (max-width:640px){
   .cta .btn { flex:1 1 100%; }
 }
+
+/* ---------- ground: texture and structure ---------- */
+/*
+ * Two fixed layers behind everything. Both are drawn rather than decorative:
+ * the grain kills the flat-panel banding that large dark fields get on cheap
+ * displays, and the grid is a measurement surface, which is what this page is
+ * about. Neither is a floating blurred blob, which is the shape every generated
+ * landing page reaches for.
+ */
+.bg-grain, .bg-grid { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.bg-grain {
+  opacity:.055;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,.042) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.042) 1px, transparent 1px);
+  background-size:72px 72px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 55% at 50% 0%, #000 15%, transparent 72%);
+  mask-image:radial-gradient(ellipse 90% 55% at 50% 0%, #000 15%, transparent 72%);
+}
+/* everything real sits above the ground */
+nav, header, section, footer, .wrap { position:relative; z-index:1; }
+
+/* ---------- hero trace ---------- */
+/*
+ * A health factor falling toward the liquidation threshold and being caught.
+ * It is the product's entire thesis drawn once, so it earns the space that an
+ * abstract shape would waste.
+ */
+.trace {
+  position:absolute; right:-8px; top:56%; transform:translateY(-34%);
+  width:min(38%,410px); height:auto; pointer-events:none; z-index:0;
+  color:var(--text); opacity:.55;
+}
+/* text sits above the trace, never behind it */
+.hero h1, .hero .lede, .hero .cta { position:relative; z-index:1; }
+@media (max-width:1100px){ .trace { display:none; } }
+.trace .axis { stroke:rgba(255,255,255,.10); stroke-width:1; }
+.trace .thresh { stroke:var(--bad); stroke-width:1.25; stroke-dasharray:5 5; opacity:.75; }
+.trace .hf {
+  fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:1000; stroke-dashoffset:1000;
+}
+.trace .rescue { fill:var(--ok); opacity:0; }
+.trace .lbl { fill:var(--dimmer); font-size:9px; font-family:var(--mono); letter-spacing:.06em; }
+.js .trace .hf { animation:draw 2.1s cubic-bezier(.4,.5,.2,1) .25s forwards; }
+.js .trace .rescue { animation:pop .5s ease 2.1s forwards; }
+@keyframes draw { to { stroke-dashoffset:0; } }
+@keyframes pop { to { opacity:1; } }
+
+/* ---------- entrances ---------- */
+/*
+ * Scoped under .js so the page is fully readable if the script never runs.
+ * An animation that can hide content on failure is not worth having.
+ */
+.js [data-reveal] {
+  opacity:0; transform:translateY(16px);
+  transition:opacity .65s cubic-bezier(.22,.7,.3,1), transform .65s cubic-bezier(.22,.7,.3,1);
+}
+.js [data-reveal].shown { opacity:1; transform:none; }
+.js tbody tr { opacity:0; transform:translateY(8px); transition:opacity .45s ease, transform .45s ease; }
+.js tbody tr.shown { opacity:1; transform:none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal], .js tbody tr { opacity:1 !important; transform:none !important; transition:none !important; }
+  .js .trace .hf { animation:none; stroke-dashoffset:0; }
+  .js .trace .rescue { animation:none; opacity:1; }
+}
+
+/* ---------- footer ---------- */
+.crenel {
+  height:9px;
+  background:repeating-linear-gradient(90deg, var(--edge) 0 9px, transparent 9px 20px);
+}
+footer { margin-top:var(--s9); border-top:none; padding:0 0 var(--s7); color:var(--dim); font-size:var(--t-sm); }
+.foot-grid {
+  display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:var(--s6);
+  padding-top:var(--s7); padding-bottom:var(--s6);
+}
+.foot-grid > * { min-width:0; }
+@media (max-width:760px){ .foot-grid { grid-template-columns:1fr; gap:var(--s5); } }
+.foot-brand .mark { width:26px; height:26px; color:var(--text); }
+.foot-tag { color:var(--text); font-size:var(--t-md); margin:var(--s3) 0 var(--s4); max-width:30ch; }
+.foot-watch { margin:0; font-size:var(--t-base); }
+.foot-col h4 {
+  font-size:var(--t-xs); text-transform:uppercase; letter-spacing:.07em;
+  color:var(--dim); font-weight:600; margin:0 0 var(--s3);
+}
+.foot-col a { display:block; color:var(--dim); padding:3px 0; font-size:var(--t-base); width:fit-content; }
+.foot-col a:hover { color:var(--text); }
+.foot-base {
+  display:flex; justify-content:space-between; gap:var(--s4); flex-wrap:wrap;
+  padding-top:var(--s4); border-top:1px solid var(--rule); color:var(--dimmer);
+}
 `;
 
 function render(s: DashboardState): string {
@@ -480,6 +598,9 @@ function render(s: DashboardState): string {
 </head>
 <body>
 
+<div class="bg-grain" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+
 <nav>
   <div class="wrap nav-in">
     <a class="brand" href="#top">${NAV_MARK}<span>Bulwark</span></a>
@@ -495,13 +616,14 @@ function render(s: DashboardState): string {
 
 <header class="hero" id="top">
   <div class="wrap">
-    <h1>Liquidation defense that knows when not to act.</h1>
-    <p class="lede">
+    ${HERO_TRACE}
+    <h1 data-reveal>Liquidation defense that knows when not to act.</h1>
+    <p class="lede" data-reveal>
       A keeper that executes onchain through KeeperHub, prices every rescue against the
       loss it would actually prevent, and attests the decision to Ethereum mainnet.
       Holds included, because a keeper that only records its successes is not an audit trail.
     </p>
-    <div class="cta">
+    <div class="cta" data-reveal>
       <a class="btn btn-primary" href="${REPO}">Read the source</a>
       <a class="btn btn-ghost" href="https://etherscan.io/address/${GUARDIAN_LOG}">GuardianLog on mainnet</a>
     </div>
@@ -509,7 +631,7 @@ function render(s: DashboardState): string {
 </header>
 
 <div class="wrap">
-  <div class="stats">
+  <div class="stats" data-reveal>
     <div class="stat lead">
       <div class="v">4/4</div>
       <div class="k">landed under gas underpricing, against 0/4 for a naive baseline</div>
@@ -528,7 +650,7 @@ function render(s: DashboardState): string {
     </div>
   </div>
 
-  <div class="notice">
+  <div class="notice" data-reveal>
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
       <b>This is a static snapshot</b>, taken ${when(s.fetchedAt)}. It does not update.
@@ -542,7 +664,7 @@ function render(s: DashboardState): string {
 
 <section id="reliability">
   <div class="wrap">
-    <div class="sec-head">
+    <div class="sec-head" data-reveal>
       <h2>Landing the transaction is the hard part.</h2>
       <p class="sub">
         Spotting a position in danger is easy. Getting the rescue mined at 3am during a
@@ -550,7 +672,7 @@ function render(s: DashboardState): string {
         price, KeeperHub against plain ethers.js.
       </p>
     </div>
-    <div class="tbl"><div class="tbl-scroll">
+    <div class="tbl" data-reveal><div class="tbl-scroll">
       <table class="score">
         <thead><tr>
           <th>Scenario</th><th>KeeperHub</th><th>ethers (blind gas limit)</th><th>ethers (default)</th>
@@ -574,10 +696,10 @@ function render(s: DashboardState): string {
 
 <section id="position">
   <div class="wrap">
-    <div class="sec-head">
+    <div class="sec-head" data-reveal>
       <h2>The position, and what the agent decided.</h2>
     </div>
-    <div class="cards">
+    <div class="cards" data-reveal>
       <div class="card feature">
         <h3>Health factor</h3>
         <div class="hero-num">${hf}</div>
@@ -608,14 +730,14 @@ function render(s: DashboardState): string {
 
 <section id="trail">
   <div class="wrap">
-    <div class="sec-head">
+    <div class="sec-head" data-reveal>
       <h2>Every decision, on Ethereum mainnet.</h2>
       <p class="sub">
         Holds are attested as well as rescues. The declined rescues are the interesting
         judgment calls, and a log that omits them proves nothing.
       </p>
     </div>
-    <div class="tbl"><div class="tbl-scroll">
+    <div class="tbl" data-reveal><div class="tbl-scroll">
       <table>
         <thead><tr>
           <th>When</th><th>Action</th><th class="num">HF</th><th class="num">Expected loss</th>
@@ -637,7 +759,7 @@ ${attestationRows(s)}
 
 <section id="runs">
   <div class="wrap">
-    <div class="sec-head">
+    <div class="sec-head" data-reveal>
       <h2>The watcher, still firing.</h2>
       <p class="sub">
         A KeeperHub workflow owns the CRITICAL tier server-side, so the position stays
@@ -645,7 +767,7 @@ ${attestationRows(s)}
         ${Math.min(SITE_RUN_LIMIT, s.workflowRuns.length)} most recent of ${s.totalWorkflowRuns}.
       </p>
     </div>
-    <div class="tbl"><div class="tbl-scroll">
+    <div class="tbl" data-reveal><div class="tbl-scroll">
       <table>
         <thead><tr>
           <th>Started</th><th>Trigger</th><th>Status</th><th class="num">Steps</th><th>Transactions</th>
@@ -663,7 +785,7 @@ ${runRows(s)}
 </section>
 
 <div class="wrap">
-  <div class="cta-panel">
+  <div class="cta-panel" data-reveal>
     <div>
       <h2>Read it, or run it.</h2>
       <p>
@@ -680,14 +802,73 @@ ${runRows(s)}
 </div>
 
 <footer>
-  <div class="wrap foot-in">
-    <div>
-      Built for the KeeperHub <em>Agents Onchain</em> hackathon.<br />
-      Watching <a class="link mono" href="${sepAddr(s.config.watchedWallet)}" target="_blank" rel="noopener">${esc(s.config.watchedWallet)}</a> on Sepolia.
+  <div class="crenel" aria-hidden="true"></div>
+  <div class="wrap foot-grid">
+    <div class="foot-brand" data-reveal>
+      ${NAV_MARK}
+      <p class="foot-tag">Liquidation defense that knows when not to act.</p>
+      <p class="foot-watch">
+        Watching <a class="link mono" href="${sepAddr(s.config.watchedWallet)}" target="_blank" rel="noopener">${esc(s.config.watchedWallet)}</a> on Sepolia
+      </p>
     </div>
+    <div class="foot-col" data-reveal>
+      <h4>Build</h4>
+      <a href="${REPO}">Source</a>
+      <a href="${REPO}/tree/main/starter-template">Starter template</a>
+      <a href="${REPO}/blob/main/chaos/RESULTS.md">Chaos results</a>
+      <a href="${REPO}/blob/main/docs/FRICTION-LOG.md">Friction log</a>
+    </div>
+    <div class="foot-col" data-reveal>
+      <h4>Onchain</h4>
+      <a href="https://etherscan.io/address/${GUARDIAN_LOG}">GuardianLog contract</a>
+      <a href="${ethTx(DEPLOY_TX)}">Deployment</a>
+      <a href="${sepAddr(s.config.watchedWallet)}">Watched position</a>
+      <a href="${REPO}/tree/main/workflows">Workflows</a>
+    </div>
+  </div>
+  <div class="wrap foot-base">
+    <span>Built for KeeperHub.</span>
+    <span>Snapshot ${when(s.fetchedAt)}</span>
   </div>
 </footer>
 
+<script>
+/*
+ * Progressive enhancement only. The reveal styles live under .js, so if this
+ * never runs the page is still fully readable rather than a column of
+ * invisible sections.
+ */
+document.documentElement.classList.add('js');
+(function () {
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var targets = document.querySelectorAll('[data-reveal]');
+  if (reduce || !('IntersectionObserver' in window)) {
+    targets.forEach(function (el) { el.classList.add('shown'); });
+    document.querySelectorAll('tbody tr').forEach(function (r) { r.classList.add('shown'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('shown');
+      io.unobserve(e.target);
+      /* rows cascade so a table assembles rather than appearing whole */
+      if (e.target.classList.contains('tbl')) {
+        e.target.querySelectorAll('tbody tr').forEach(function (row, i) {
+          setTimeout(function () { row.classList.add('shown'); }, 60 + i * 55);
+        });
+      }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  targets.forEach(function (el) { io.observe(el); });
+  /* the hero is above the fold; do not wait for a scroll that never comes */
+  requestAnimationFrame(function () {
+    document.querySelectorAll('.hero [data-reveal]').forEach(function (el, i) {
+      setTimeout(function () { el.classList.add('shown'); }, i * 110);
+    });
+  });
+})();
+</script>
 </body>
 </html>
 `;
