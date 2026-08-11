@@ -184,7 +184,7 @@ ${FONT_FACES}
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 
   /* type scale */
-  --t-xs:12px; --t-sm:13px; --t-base:14px; --t-md:16px; --t-lg:20px;
+  --t-xs:13px; --t-sm:14px; --t-base:15px; --t-md:17px; --t-lg:21px;
 
   /* 4px spacing grid */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
@@ -216,14 +216,19 @@ a { color:inherit; text-decoration:none; }
 }
 .link:hover { text-decoration-color:var(--text); }
 
-.mono { font-family:var(--mono); font-size:.88em; letter-spacing:-.01em; }
+/* Family only. Sizing mono in em is a trap: inside a table cell the em
+   resolves against the inherited body size, not the cell's, so the hashes came
+   out larger than the figures next to them. Sizes are set explicitly, one step
+   below the sans, because Plex Mono reads optically larger at equal px. */
+.mono { font-family:var(--mono); letter-spacing:-.01em; }
+td.mono, th.mono { font-size:14px; }
 .dim { color:var(--dim); }
 .nowrap { white-space:nowrap; }
 
 /* Figures are sans with tabular lining, so columns align without monospace
    flattening a health factor and a transaction hash to the same weight. */
 .num, .fig {
-  text-align:right;
+  text-align:right; font-weight:500;
   font-variant-numeric:tabular-nums;
   font-feature-settings:"tnum" 1;
 }
@@ -267,7 +272,7 @@ h1 {
   margin:0 0 var(--s5); max-width:22ch; text-wrap:balance;
 }
 .lede {
-  font-size:clamp(16px,.375vw + 14.5px,19px); color:var(--dim);
+  font-size:clamp(17px,.5vw + 15px,20px); color:var(--dim);
   max-width:56ch; margin:0 0 var(--s6); text-wrap:pretty;
 }
 .cta { display:flex; gap:var(--s3); flex-wrap:wrap; }
@@ -286,7 +291,7 @@ h1 {
   line-height:1.05; font-variant-numeric:tabular-nums;
 }
 .stat.lead .v { font-size:clamp(40px,2vw + 30px,52px); letter-spacing:-.03em; }
-.stat .k { color:var(--dim); font-size:var(--t-sm); margin-top:var(--s2); text-wrap:pretty; }
+.stat .k { color:var(--dim); font-size:var(--t-base); margin-top:var(--s2); text-wrap:pretty; }
 @media (max-width:820px){
   .stats { grid-template-columns:1fr 1fr; gap:var(--s5) 0; }
   .stat:nth-child(3) { padding-left:0; border-left:none; }
@@ -336,7 +341,7 @@ h2 {
 .card.feature { display:flex; flex-direction:column; justify-content:center; }
 .card h3 {
   font-size:var(--t-xs); font-weight:600;
-  text-transform:uppercase; letter-spacing:.08em; color:var(--dimmer);
+  text-transform:uppercase; letter-spacing:.07em; color:var(--dim);
   margin:0 0 var(--s3);
 }
 .card .hero-num {
@@ -379,8 +384,8 @@ h2 {
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
 th {
-  color:var(--dimmer); font-weight:600; font-size:var(--t-xs);
-  letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
+  color:var(--dim); font-weight:600; font-size:var(--t-xs);
+  letter-spacing:.07em; text-transform:uppercase; white-space:nowrap;
 }
 th.num { text-align:right; }
 tbody tr:last-child td { border-bottom:none; }
