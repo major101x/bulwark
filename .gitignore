@@ -14,6 +14,7 @@ data/
 # Kept locally, deliberately out of the repo
 SPEC.md
 dashboard.png
+VIDEO-SCRIPT.md
 
 # Generated snapshot page
 site/dist/
