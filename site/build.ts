@@ -43,7 +43,7 @@
  *     one template four times.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -61,6 +61,31 @@ const DEPLOY_TX = '0x62938be3d006d6a0757c827f3f463f0ea9043f8defb521e7d456b428763
  * long column of them crowds out the sections that carry the argument.
  */
 const SITE_RUN_LIMIT = 6;
+
+/**
+ * Self-hosted IBM Plex, copied out of the Fontsource packages at build time.
+ *
+ * Self-hosted rather than loaded from Google's CDN: one less third party in the
+ * critical path, no request to an external host for a page whose whole point is
+ * being verifiable, and nothing to break if that CDN is blocked. 106KB for five
+ * weights, latin subset only.
+ *
+ * The previous stack said `system-ui`, which is honest but means the page has a
+ * different typeface for every visitor: Ubuntu here, SF Pro on macOS, Segoe UI
+ * on Windows. Measured on this machine, `system-ui` resolved to Ubuntu.
+ */
+const FONTS: Array<{ pkg: string; file: string; family: string; weight: number }> = [
+  { pkg: 'ibm-plex-sans', file: 'ibm-plex-sans-latin-400-normal.woff2', family: 'IBM Plex Sans', weight: 400 },
+  { pkg: 'ibm-plex-sans', file: 'ibm-plex-sans-latin-500-normal.woff2', family: 'IBM Plex Sans', weight: 500 },
+  { pkg: 'ibm-plex-sans', file: 'ibm-plex-sans-latin-600-normal.woff2', family: 'IBM Plex Sans', weight: 600 },
+  { pkg: 'ibm-plex-sans', file: 'ibm-plex-sans-latin-700-normal.woff2', family: 'IBM Plex Sans', weight: 700 },
+  { pkg: 'ibm-plex-mono', file: 'ibm-plex-mono-latin-400-normal.woff2', family: 'IBM Plex Mono', weight: 400 },
+];
+
+const FONT_FACES = FONTS.map(
+  (f) => `@font-face{font-family:"${f.family}";font-style:normal;font-weight:${f.weight};` +
+    `font-display:swap;src:url("fonts/${f.file}") format("woff2");}`,
+).join('\n');
 
 const esc = (s: unknown): string =>
   String(s ?? '').replace(
@@ -130,6 +155,8 @@ function runRows(s: DashboardState): string {
 }
 
 const CSS = `
+${FONT_FACES}
+
 *,*::before,*::after { box-sizing:border-box; }
 
 :root {
@@ -153,8 +180,8 @@ const CSS = `
   --warn-ink:#e7dcc4;
   --bad:#d0645f;
 
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 
   /* type scale */
   --t-xs:12px; --t-sm:13px; --t-base:14px; --t-md:16px; --t-lg:20px;
@@ -631,11 +658,35 @@ if (state.attestations.length === 0) {
   process.exit(1);
 }
 
+// Same reasoning for the live position. A transient RPC outage otherwise ships
+// a page whose position and economics cards are all "?", which reads as a
+// broken agent rather than as a failed read on the build machine.
+if (state.position === null || state.decision === null) {
+  console.error('\nRefusing to build: no position read, so the page would publish "?" cards.');
+  console.error('Usually a transient Sepolia RPC failure. Run it again.');
+  process.exit(1);
+}
+
 const outDir = join(here, 'dist');
 mkdirSync(outDir, { recursive: true });
+
+const fontDir = join(outDir, 'fonts');
+mkdirSync(fontDir, { recursive: true });
+for (const f of FONTS) {
+  copyFileSync(
+    join(here, '..', 'node_modules', '@fontsource', f.pkg, 'files', f.file),
+    join(fontDir, f.file),
+  );
+}
+// OFL requires the licence travel with the fonts.
+copyFileSync(
+  join(here, '..', 'node_modules', '@fontsource', 'ibm-plex-sans', 'LICENSE'),
+  join(fontDir, 'LICENSE-IBM-Plex.txt'),
+);
 writeFileSync(join(outDir, 'index.html'), render(state), 'utf8');
 
 console.log(`Wrote site/dist/index.html`);
+console.log(`  ${FONTS.length} self-hosted font files`);
 console.log(`  ${state.attestations.length} attestations`);
 console.log(`  ${state.workflowRuns.length} of ${state.totalWorkflowRuns} workflow runs`);
 console.log(`  position HF ${state.position?.healthFactor?.toFixed(4) ?? 'n/a'}`);
