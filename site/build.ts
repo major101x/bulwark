@@ -482,22 +482,32 @@ section, #top { scroll-margin-top:76px; }
 .bg-grain, .bg-grid { position:fixed; inset:0; pointer-events:none; z-index:0; }
 
 /*
- * The mark at architectural scale, fixed and slowly turning, running off the
- * right edge. Fixed rather than scrolled so it behaves like the building the
- * page is printed on rather than an element in the layout, and outlined rather
- * than filled so it stays a structure instead of a silhouette.
+ * The mark at architectural scale, twice: one anchored into the bottom right
+ * corner, one into the top left, each offset by half its own size so it is cut
+ * by both edges. Fixed rather than scrolled so they behave like the building
+ * the page is printed on rather than elements in the layout, and outlined
+ * rather than filled so they stay structure instead of silhouette.
+ *
+ * They turn at different speeds and in opposite directions, so the pair never
+ * settles into a synchronised pattern that would read as a loop.
  */
 .bg-mark {
-  position:fixed; right:-37vmin; top:50%; transform:translateY(-50%);
-  width:74vmin; height:74vmin; z-index:0; pointer-events:none;
+  position:fixed; width:74vmin; height:74vmin; z-index:0; pointer-events:none;
 }
+.bg-mark.br { right:-37vmin; bottom:-37vmin; }
+.bg-mark.tl { left:-37vmin; top:-37vmin; }
 .bg-mark svg {
   width:100%; height:100%; display:block;
   color:rgba(255,255,255,.085);
   animation:turn 150s linear infinite; transform-origin:50% 50%;
 }
+.bg-mark.tl svg { animation-duration:196s; animation-direction:reverse; color:rgba(255,255,255,.07); }
 @keyframes turn { to { transform:rotate(360deg); } }
-@media (max-width:760px){ .bg-mark { right:-44vmin; width:88vmin; height:88vmin; } }
+@media (max-width:760px){
+  .bg-mark { width:86vmin; height:86vmin; }
+  .bg-mark.br { right:-43vmin; bottom:-43vmin; }
+  .bg-mark.tl { left:-43vmin; top:-43vmin; }
+}
 @media (prefers-reduced-motion: reduce){ .bg-mark svg { animation:none; } }
 .bg-grain {
   opacity:.11;
@@ -578,7 +588,8 @@ function render(s: DashboardState): string {
 
 <div class="bg-grain" aria-hidden="true"></div>
 <div class="bg-grid" aria-hidden="true"></div>
-<div class="bg-mark" aria-hidden="true">${BG_MARK}</div>
+<div class="bg-mark tl" aria-hidden="true">${BG_MARK}</div>
+<div class="bg-mark br" aria-hidden="true">${BG_MARK}</div>
 
 <nav>
   <div class="wrap nav-in">
