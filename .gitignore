@@ -22,3 +22,4 @@ site/dist/
 # Local design references and stray captures, never committed
 *.webp
 mermaid-check.png
+launch-tweet*.png
