@@ -494,8 +494,12 @@ section, #top { scroll-margin-top:76px; }
 .bg-mark {
   position:fixed; width:74vmin; height:74vmin; z-index:0; pointer-events:none;
 }
-.bg-mark.br { right:-37vmin; bottom:-37vmin; }
-.bg-mark.tl { left:-37vmin; top:-37vmin; }
+/* Anchored to the side edges rather than jammed into the corners, and offset
+   from centre in opposite directions: the left one sits low, the right one
+   high. Positioned off centre by a fraction of their own height so the
+   relationship holds at any viewport height. */
+.bg-mark.br { right:-37vmin; top:50%; transform:translateY(-74%); }
+.bg-mark.tl { left:-37vmin; top:50%; transform:translateY(-26%); }
 .bg-mark svg {
   width:100%; height:100%; display:block;
   color:rgba(255,255,255,.085);
@@ -505,8 +509,8 @@ section, #top { scroll-margin-top:76px; }
 @keyframes turn { to { transform:rotate(360deg); } }
 @media (max-width:760px){
   .bg-mark { width:86vmin; height:86vmin; }
-  .bg-mark.br { right:-43vmin; bottom:-43vmin; }
-  .bg-mark.tl { left:-43vmin; top:-43vmin; }
+  .bg-mark.br { right:-43vmin; transform:translateY(-78%); }
+  .bg-mark.tl { left:-43vmin; transform:translateY(-22%); }
 }
 @media (prefers-reduced-motion: reduce){ .bg-mark svg { animation:none; } }
 .bg-grain {
