@@ -105,7 +105,7 @@ const MARK_PATH =
 /** Outlined mark for the fixed background. Hairline at any scale. */
 const BG_MARK =
   '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-  `<path d="${MARK_PATH}" fill="none" stroke="currentColor" stroke-width="1.1" vector-effect="non-scaling-stroke"/>` +
+  `<path d="${MARK_PATH}" fill="none" stroke="currentColor" stroke-width="2.4" vector-effect="non-scaling-stroke"/>` +
   '</svg>';
 
 /** Inline mark for the nav. currentColor, so it inherits the text ink. */
@@ -488,7 +488,7 @@ section, #top { scroll-margin-top:76px; }
  * than filled so it stays a structure instead of a silhouette.
  */
 .bg-mark {
-  position:fixed; right:-15vmin; top:50%; transform:translateY(-50%);
+  position:fixed; right:-37vmin; top:50%; transform:translateY(-50%);
   width:74vmin; height:74vmin; z-index:0; pointer-events:none;
 }
 .bg-mark svg {
@@ -497,10 +497,10 @@ section, #top { scroll-margin-top:76px; }
   animation:turn 150s linear infinite; transform-origin:50% 50%;
 }
 @keyframes turn { to { transform:rotate(360deg); } }
-@media (max-width:760px){ .bg-mark { right:-32vmin; width:88vmin; height:88vmin; } }
+@media (max-width:760px){ .bg-mark { right:-44vmin; width:88vmin; height:88vmin; } }
 @media (prefers-reduced-motion: reduce){ .bg-mark svg { animation:none; } }
 .bg-grain {
-  opacity:.055;
+  opacity:.11;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .bg-grid {
