@@ -6,7 +6,7 @@
 <title>Bulwark · liquidation defense that knows when not to act</title>
 <meta name="description" content="A liquidation-defense keeper that executes onchain through KeeperHub, prices every rescue against the loss it prevents, and attests every decision to Ethereum mainnet." />
 <meta name="color-scheme" content="dark" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%9B%A1%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22%230d0d10%22%2F%3E%3Cg%20transform%3D%22translate(4%204)%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M3.8%204.8H7.8V8.6H10V4.8H14V8.6H16.2V4.8H20.2V20.2H3.8V4.8Z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E" />
 <style>
 @font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2");}
 @font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2");}
@@ -47,7 +47,8 @@
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
   --s6:32px; --s7:48px; --s8:64px; --s9:96px;
 
-  --r-sm:4px; --r:10px; --r-lg:16px; --r-pill:999px;
+  /* Squared throughout: no radius anywhere, including buttons and pills. */
+  --r-sm:0; --r:0; --r-lg:0; --r-pill:0;
 }
 
 html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
@@ -102,7 +103,11 @@ nav {
 .nav-in { display:flex; align-items:center; gap:var(--s5); height:60px; }
 /* the auto margin lives on an element that is never hidden, so the mobile
    layout does not collapse when the links go away */
-.brand { margin-right:auto; font-weight:600; letter-spacing:-.02em; font-size:var(--t-md); }
+.brand {
+  margin-right:auto; display:inline-flex; align-items:center; gap:9px;
+  font-weight:600; letter-spacing:-.02em; font-size:var(--t-md); color:var(--text);
+}
+.mark { width:21px; height:21px; flex:none; display:block; }
 .nav-links { display:flex; gap:var(--s5); font-size:var(--t-base); color:var(--dim); }
 .nav-links a:hover { color:var(--text); }
 @media (max-width:820px){ .nav-links { display:none; } }
@@ -240,9 +245,13 @@ h2 {
 }
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
+/* The header band sits on its own ground so the eye separates the labels
+   from the data without needing a heavier rule between them. */
+thead { background:var(--panel-2); }
 th {
   color:var(--dim); font-weight:600; font-size:var(--t-xs);
   letter-spacing:.07em; text-transform:uppercase; white-space:nowrap;
+  border-bottom:1px solid var(--edge);
 }
 th.num { text-align:right; }
 tbody tr:last-child td { border-bottom:none; }
@@ -278,7 +287,7 @@ section, #top { scroll-margin-top:76px; }
 
 <nav>
   <div class="wrap nav-in">
-    <a class="brand" href="#top">Bulwark</a>
+    <a class="brand" href="#top"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.8 4.8H7.8V8.6H10V4.8H14V8.6H16.2V4.8H20.2V20.2H3.8V4.8Z" fill="currentColor"/></svg><span>Bulwark</span></a>
     <div class="nav-links">
       <a href="#reliability">Reliability</a>
       <a href="#position">Position</a>
@@ -327,7 +336,7 @@ section, #top { scroll-margin-top:76px; }
   <div class="notice">
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
-      <b>This is a static snapshot</b>, taken 2026-08-11 12:05 UTC. It does not update.
+      <b>This is a static snapshot</b>, taken 2026-08-11 13:08 UTC. It does not update.
       The live dashboard is a local server (<code>npm run dashboard</code>): it reads a
       KeeperHub API key, so it cannot be served publicly without handing that key to the
       browser. Every row below links to a block explorer, where the record is live and
@@ -376,13 +385,13 @@ section, #top { scroll-margin-top:76px; }
     <div class="cards">
       <div class="card feature">
         <h3>Health factor</h3>
-        <div class="hero-num">1.1563</div>
+        <div class="hero-num">1.1565</div>
         <div style="margin-top:12px"><span class="pill tier-WATCH">WATCH</span></div>
       </div>
       <div class="card">
         <h3>Position</h3>
-        <div class="row"><span>collateral</span><b>$883.45</b></div>
-        <div class="row"><span>debt</span><b>$573.04</b></div>
+        <div class="row"><span>collateral</span><b>$883.69</b></div>
+        <div class="row"><span>debt</span><b>$573.09</b></div>
         <div class="row"><span>liq. threshold</span><b>75%</b></div>
       </div>
       <div class="card">
@@ -393,9 +402,9 @@ section, #top { scroll-margin-top:76px; }
       </div>
       <div class="card">
         <h3>Economics</h3>
-        <div class="row"><span>P(liquidation)</span><b>1.69%</b></div>
+        <div class="row"><span>P(liquidation)</span><b>1.68%</b></div>
         <div class="row"><span>expected loss</span><b>$0.24</b></div>
-        <div class="row"><span>rescue cost</span><b>$1.21</b></div>
+        <div class="row"><span>rescue cost</span><b>$1.15</b></div>
       </div>
     </div>
     <div class="rationale">HF 1.156 → WATCH. No action needed.</div>
@@ -483,42 +492,42 @@ section, #top { scroll-margin-top:76px; }
         </tr></thead>
         <tbody>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:58 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 13:00 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:48 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 12:50 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:38 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 12:40 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:28 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 12:29 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:17 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 12:19 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
       <td class="mono"><span class="dim">none, condition false</span></td>
     </tr>
 <tr>
-      <td class="dim nowrap mono">2026-08-11 11:07 UTC</td>
+      <td class="dim nowrap mono">2026-08-11 12:08 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
