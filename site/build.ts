@@ -87,6 +87,41 @@ const FONT_FACES = FONTS.map(
     `font-display:swap;src:url("fonts/${f.file}") format("woff2");}`,
 ).join('\n');
 
+/**
+ * The Bulwark mark: a crenellated wall.
+ *
+ * A bulwark is a rampart, not a shield, and the generic security shield is the
+ * most over-used glyph in the category. The merlons make it specific.
+ *
+ * Chosen by rendering the candidates at 96, 32, 21 and 16px and looking at
+ * them, which killed two better-sounding ideas: a shield with a threshold slot
+ * cut through it collapsed to an illegible blob below ~24px, and at small sizes
+ * read as a minus sign, so the mark said "denied" rather than "defended".
+ * Anything with interior detail has to survive a 16px browser tab first.
+ */
+const MARK_PATH =
+  'M3.8 4.8H7.8V8.6H10V4.8H14V8.6H16.2V4.8H20.2V20.2H3.8V4.8Z';
+
+/** Inline mark for the nav. currentColor, so it inherits the text ink. */
+const NAV_MARK =
+  '<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+  `<path fill-rule="evenodd" clip-rule="evenodd" d="${MARK_PATH}" fill="currentColor"/>` +
+  '</svg>';
+
+/**
+ * Favicon: the same white mark on the page's own dark ground.
+ *
+ * On a transparent field a white glyph disappears against a light tab bar, and
+ * roughly half of browsers run one, so the plate is doing real work.
+ */
+const FAVICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+  '<rect width="32" height="32" fill="#0d0d10"/>' +
+  `<g transform="translate(4 4)"><path fill-rule="evenodd" clip-rule="evenodd" d="${MARK_PATH}" fill="#ffffff"/></g>` +
+  '</svg>';
+
+const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`;
+
 const esc = (s: unknown): string =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -190,7 +225,8 @@ ${FONT_FACES}
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
   --s6:32px; --s7:48px; --s8:64px; --s9:96px;
 
-  --r-sm:4px; --r:10px; --r-lg:16px; --r-pill:999px;
+  /* Squared throughout: no radius anywhere, including buttons and pills. */
+  --r-sm:0; --r:0; --r-lg:0; --r-pill:0;
 }
 
 html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
@@ -245,7 +281,11 @@ nav {
 .nav-in { display:flex; align-items:center; gap:var(--s5); height:60px; }
 /* the auto margin lives on an element that is never hidden, so the mobile
    layout does not collapse when the links go away */
-.brand { margin-right:auto; font-weight:600; letter-spacing:-.02em; font-size:var(--t-md); }
+.brand {
+  margin-right:auto; display:inline-flex; align-items:center; gap:9px;
+  font-weight:600; letter-spacing:-.02em; font-size:var(--t-md); color:var(--text);
+}
+.mark { width:21px; height:21px; flex:none; display:block; }
 .nav-links { display:flex; gap:var(--s5); font-size:var(--t-base); color:var(--dim); }
 .nav-links a:hover { color:var(--text); }
 @media (max-width:820px){ .nav-links { display:none; } }
@@ -383,9 +423,13 @@ h2 {
 }
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
+/* The header band sits on its own ground so the eye separates the labels
+   from the data without needing a heavier rule between them. */
+thead { background:var(--panel-2); }
 th {
   color:var(--dim); font-weight:600; font-size:var(--t-xs);
   letter-spacing:.07em; text-transform:uppercase; white-space:nowrap;
+  border-bottom:1px solid var(--edge);
 }
 th.num { text-align:right; }
 tbody tr:last-child td { border-bottom:none; }
@@ -430,14 +474,14 @@ function render(s: DashboardState): string {
 <title>Bulwark · liquidation defense that knows when not to act</title>
 <meta name="description" content="A liquidation-defense keeper that executes onchain through KeeperHub, prices every rescue against the loss it prevents, and attests every decision to Ethereum mainnet." />
 <meta name="color-scheme" content="dark" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%9B%A1%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="${FAVICON_HREF}" />
 <style>${CSS}</style>
 </head>
 <body>
 
 <nav>
   <div class="wrap nav-in">
-    <a class="brand" href="#top">Bulwark</a>
+    <a class="brand" href="#top">${NAV_MARK}<span>Bulwark</span></a>
     <div class="nav-links">
       <a href="#reliability">Reliability</a>
       <a href="#position">Position</a>
@@ -656,19 +700,34 @@ if (state.warnings.length > 0) {
   for (const w of state.warnings) console.error(`  - ${w}`);
 }
 
-// A snapshot missing the thing it exists to show is worse than no snapshot: it
-// would publish an empty page that reads as "the agent never did anything".
+/**
+ * Refuse to publish a page missing any of the three things it exists to show.
+ *
+ * Each is a live network call made at build time, and all three have now failed
+ * transiently at least once while building this page. A failure produces an
+ * empty table or a row of "?" cards, which does not read as "the build machine
+ * could not reach an RPC". It reads as "this agent has never done anything",
+ * which is the opposite of what the page is claiming.
+ *
+ * Publishing nothing is recoverable by running the build again. Publishing a
+ * page that quietly understates the work is not, because nobody looking at it
+ * knows to doubt it.
+ */
+const missing: string[] = [];
 if (state.attestations.length === 0) {
-  console.error('\nRefusing to build: no attestations. Check the ledger.');
-  process.exit(1);
+  missing.push('no attestations, the decision trail would be empty (check the ledger)');
+}
+if (state.position === null || state.decision === null) {
+  missing.push('no position read, the cards would publish "?" (Sepolia RPC)');
+}
+if (state.workflowRuns.length === 0) {
+  missing.push('no workflow runs, the execution trail would read "0 of 0" (KeeperHub API)');
 }
 
-// Same reasoning for the live position. A transient RPC outage otherwise ships
-// a page whose position and economics cards are all "?", which reads as a
-// broken agent rather than as a failed read on the build machine.
-if (state.position === null || state.decision === null) {
-  console.error('\nRefusing to build: no position read, so the page would publish "?" cards.');
-  console.error('Usually a transient Sepolia RPC failure. Run it again.');
+if (missing.length > 0) {
+  console.error('\nRefusing to build:');
+  for (const m of missing) console.error(`  - ${m}`);
+  console.error('\nUsually transient. Run it again.');
   process.exit(1);
 }
 
