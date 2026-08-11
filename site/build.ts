@@ -133,6 +133,7 @@ const short = (h: string): string => (h ? `${esc(h.slice(0, 10))}…` : '');
 const usd = (n: number): string => `$${Number(n).toFixed(2)}`;
 const ethTx = (h: string): string => `https://etherscan.io/tx/${h}`;
 const sepTx = (h: string): string => `https://sepolia.etherscan.io/tx/${h}`;
+const sepAddr = (a: string): string => `https://sepolia.etherscan.io/address/${a}`;
 
 function when(iso: string | number): string {
   const d = typeof iso === 'number' ? new Date(iso * 1000) : new Date(iso);
@@ -682,9 +683,8 @@ ${runRows(s)}
   <div class="wrap foot-in">
     <div>
       Built for the KeeperHub <em>Agents Onchain</em> hackathon.<br />
-      Watching <code>${esc(s.config.watchedWallet)}</code> on Sepolia.
+      Watching <a class="link mono" href="${sepAddr(s.config.watchedWallet)}" target="_blank" rel="noopener">${esc(s.config.watchedWallet)}</a> on Sepolia.
     </div>
-    <div>Regenerate with <code>npm run site:build</code></div>
   </div>
 </footer>
 
