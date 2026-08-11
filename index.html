@@ -41,7 +41,7 @@
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 
   /* type scale */
-  --t-xs:12px; --t-sm:13px; --t-base:14px; --t-md:16px; --t-lg:20px;
+  --t-xs:13px; --t-sm:14px; --t-base:15px; --t-md:17px; --t-lg:21px;
 
   /* 4px spacing grid */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
@@ -73,14 +73,19 @@ a { color:inherit; text-decoration:none; }
 }
 .link:hover { text-decoration-color:var(--text); }
 
-.mono { font-family:var(--mono); font-size:.88em; letter-spacing:-.01em; }
+/* Family only. Sizing mono in em is a trap: inside a table cell the em
+   resolves against the inherited body size, not the cell's, so the hashes came
+   out larger than the figures next to them. Sizes are set explicitly, one step
+   below the sans, because Plex Mono reads optically larger at equal px. */
+.mono { font-family:var(--mono); letter-spacing:-.01em; }
+td.mono, th.mono { font-size:14px; }
 .dim { color:var(--dim); }
 .nowrap { white-space:nowrap; }
 
 /* Figures are sans with tabular lining, so columns align without monospace
    flattening a health factor and a transaction hash to the same weight. */
 .num, .fig {
-  text-align:right;
+  text-align:right; font-weight:500;
   font-variant-numeric:tabular-nums;
   font-feature-settings:"tnum" 1;
 }
@@ -124,7 +129,7 @@ h1 {
   margin:0 0 var(--s5); max-width:22ch; text-wrap:balance;
 }
 .lede {
-  font-size:clamp(16px,.375vw + 14.5px,19px); color:var(--dim);
+  font-size:clamp(17px,.5vw + 15px,20px); color:var(--dim);
   max-width:56ch; margin:0 0 var(--s6); text-wrap:pretty;
 }
 .cta { display:flex; gap:var(--s3); flex-wrap:wrap; }
@@ -143,7 +148,7 @@ h1 {
   line-height:1.05; font-variant-numeric:tabular-nums;
 }
 .stat.lead .v { font-size:clamp(40px,2vw + 30px,52px); letter-spacing:-.03em; }
-.stat .k { color:var(--dim); font-size:var(--t-sm); margin-top:var(--s2); text-wrap:pretty; }
+.stat .k { color:var(--dim); font-size:var(--t-base); margin-top:var(--s2); text-wrap:pretty; }
 @media (max-width:820px){
   .stats { grid-template-columns:1fr 1fr; gap:var(--s5) 0; }
   .stat:nth-child(3) { padding-left:0; border-left:none; }
@@ -193,7 +198,7 @@ h2 {
 .card.feature { display:flex; flex-direction:column; justify-content:center; }
 .card h3 {
   font-size:var(--t-xs); font-weight:600;
-  text-transform:uppercase; letter-spacing:.08em; color:var(--dimmer);
+  text-transform:uppercase; letter-spacing:.07em; color:var(--dim);
   margin:0 0 var(--s3);
 }
 .card .hero-num {
@@ -236,8 +241,8 @@ h2 {
 table { border-collapse:collapse; width:100%; min-width:680px; }
 th,td { text-align:left; padding:12px var(--s4); border-bottom:1px solid var(--rule); font-size:var(--t-base); line-height:1.45; }
 th {
-  color:var(--dimmer); font-weight:600; font-size:var(--t-xs);
-  letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
+  color:var(--dim); font-weight:600; font-size:var(--t-xs);
+  letter-spacing:.07em; text-transform:uppercase; white-space:nowrap;
 }
 th.num { text-align:right; }
 tbody tr:last-child td { border-bottom:none; }
@@ -322,7 +327,7 @@ section, #top { scroll-margin-top:76px; }
   <div class="notice">
     <svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z"/></svg>
     <div>
-      <b>This is a static snapshot</b>, taken 2026-08-11 11:39 UTC. It does not update.
+      <b>This is a static snapshot</b>, taken 2026-08-11 12:05 UTC. It does not update.
       The live dashboard is a local server (<code>npm run dashboard</code>): it reads a
       KeeperHub API key, so it cannot be served publicly without handing that key to the
       browser. Every row below links to a block explorer, where the record is live and
@@ -371,13 +376,13 @@ section, #top { scroll-margin-top:76px; }
     <div class="cards">
       <div class="card feature">
         <h3>Health factor</h3>
-        <div class="hero-num">1.1562</div>
+        <div class="hero-num">1.1563</div>
         <div style="margin-top:12px"><span class="pill tier-WATCH">WATCH</span></div>
       </div>
       <div class="card">
         <h3>Position</h3>
-        <div class="row"><span>collateral</span><b>$883.35</b></div>
-        <div class="row"><span>debt</span><b>$573.02</b></div>
+        <div class="row"><span>collateral</span><b>$883.45</b></div>
+        <div class="row"><span>debt</span><b>$573.04</b></div>
         <div class="row"><span>liq. threshold</span><b>75%</b></div>
       </div>
       <div class="card">
@@ -388,9 +393,9 @@ section, #top { scroll-margin-top:76px; }
       </div>
       <div class="card">
         <h3>Economics</h3>
-        <div class="row"><span>P(liquidation)</span><b>1.70%</b></div>
+        <div class="row"><span>P(liquidation)</span><b>1.69%</b></div>
         <div class="row"><span>expected loss</span><b>$0.24</b></div>
-        <div class="row"><span>rescue cost</span><b>$1.12</b></div>
+        <div class="row"><span>rescue cost</span><b>$1.21</b></div>
       </div>
     </div>
     <div class="rationale">HF 1.156 → WATCH. No action needed.</div>
@@ -478,6 +483,20 @@ section, #top { scroll-margin-top:76px; }
         </tr></thead>
         <tbody>
 <tr>
+      <td class="dim nowrap mono">2026-08-11 11:58 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
+      <td class="dim nowrap mono">2026-08-11 11:48 UTC</td>
+      <td>block</td>
+      <td><span class="status ok">success</span></td>
+      <td class="num">3</td>
+      <td class="mono"><span class="dim">none, condition false</span></td>
+    </tr>
+<tr>
       <td class="dim nowrap mono">2026-08-11 11:38 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
@@ -500,20 +519,6 @@ section, #top { scroll-margin-top:76px; }
     </tr>
 <tr>
       <td class="dim nowrap mono">2026-08-11 11:07 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 10:57 UTC</td>
-      <td>block</td>
-      <td><span class="status ok">success</span></td>
-      <td class="num">3</td>
-      <td class="mono"><span class="dim">none, condition false</span></td>
-    </tr>
-<tr>
-      <td class="dim nowrap mono">2026-08-11 10:46 UTC</td>
       <td>block</td>
       <td><span class="status ok">success</span></td>
       <td class="num">3</td>
