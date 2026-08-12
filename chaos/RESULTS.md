@@ -34,8 +34,18 @@ failures from blocking sends. The gap between the two variants is the point.
 
 ### Gas underpricing: the clearest result
 
-Both sides were handed the same unusable instruction, a gas price of 0.05 gwei
-against a market of roughly 0.98 gwei.
+The baseline was pinned to a hardcoded 0.05 gwei against a market of roughly
+0.98 gwei, with a hardcoded gas limit so estimation never intervened. That is
+what a static gas price becomes the moment the network moves. KeeperHub was
+given a thin gas budget and allowed to manage it.
+
+**The two sides were not handed identical instructions, and an earlier version
+of this file said they were.** The scenario asks KeeperHub for a `0.6`
+multiplier, which reaches the API as `priorityFeeGwei: "0.6"`, an absolute tip
+rather than a fraction of market. Against a ~1 gwei market that is not an
+underbid at all. So this row measures managed execution against a static
+one-shot price, which is the real-world comparison, but it is not a symmetric
+underbid. See bug 6 below.
 
 **KeeperHub landed 4/4. The blind baseline landed 0/4**, with all four still
 sitting in the mempool at the deadline. Confirmed independently from chain
@@ -112,6 +122,14 @@ looked at hard enough.
    abandoning means we stopped watching, not that we observed non-inclusion.
 5. **Stuck transactions contaminated the following scenario.** The harness now
    clears the baseline wallet between backends rather than at the end.
+6. **The fix for bug 2 overshot, and the write-up followed it.** Giving the
+   scenario its own baseline gas price was right, but the matching `0.6`
+   multiplier sent to KeeperHub is transmitted as `priorityFeeGwei: "0.6"`, an
+   absolute tip, not 0.6x market. The intent was a symmetric underbid; the wire
+   format is a healthy tip. Found by reading `agent/executor.ts` against
+   `chaos/injectors.ts` rather than trusting the comment in either. The measured
+   result stands, the "same bad instruction" framing does not, and this file
+   claimed the framing for several days.
 
 ## What we did not run
 
