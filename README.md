@@ -138,8 +138,10 @@ defending when your laptop sleeps is not a keeper. ARMED lives in the agent
 because the first-passage model and the cost/benefit comparison do not fit in a
 condition node.
 
-Both rescues *and* holds are attested. A keeper that only records its successes is not
-an audit trail, and the declined rescues are the interesting judgment calls.
+Both rescues *and* holds are attested, since the declined rescues are the
+interesting judgment calls. Attestation fires on a rescue or a tier change
+rather than every tick: a mainnet transaction every few minutes to report that
+nothing moved is noise, and it burns the execution quota.
 
 The ledger exists because free RPC tiers stop serving `eth_getLogs` past a few
 hundred blocks, so an attestation not written down as it lands becomes
@@ -148,7 +150,7 @@ is just the index.
 
 ## Status
 
-**Autonomous liquidation defense is live, and every decision is attested to Ethereum mainnet.**
+**Autonomous liquidation defense is live, and every decision change is attested to Ethereum mainnet.**
 
 A KeeperHub workflow watches the position every 50 Sepolia blocks and rescues it
 with no local process running. Verified both branches on 2026-08-02:
@@ -193,7 +195,7 @@ code verified byte-identical to the local compile.
 | Dashboard | done, serves both audit trails (`npm run dashboard`) |
 | Public snapshot page | done, [major101x.github.io/bulwark](https://major101x.github.io/bulwark/) (`npm run site:build`) |
 | Starter template | done, first transaction needs only an API key ([README](./starter-template/README.md)) |
-| Demo video | not started |
+| Demo video | scripted, recording pending |
 
 The open questions this depended on (Aave V3 on Sepolia, mainnet gas sponsorship
 for arbitrary calls, testnet marketplace settlement, free-tier quota) were
