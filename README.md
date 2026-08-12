@@ -22,10 +22,16 @@ data in [chaos/RESULTS.md](./chaos/RESULTS.md).
 | Congestion (4 concurrent from one wallet) | **4/4 landed** | 1/4 | 2/4 |
 | Revert | all refused | all refused | all refused |
 
-**Underpricing** is the clearest result and reproduces across runs. Both sides
-got the same unusable gas price. KeeperHub adjusted and landed everything; the
+**Underpricing** is the clearest result and reproduces across runs. The
+baseline was pinned to a hardcoded 0.05 gwei with a hardcoded gas limit, which
+is what a static price becomes the moment the network moves. KeeperHub was
+given a thin gas budget and allowed to manage it, and landed everything; the
 blind baseline broadcast four transactions that never mined, confirmed from
 chain state and clearable only by same-nonce replacement at 5x market.
+
+This measures managed execution against a static one-shot price. It is not a
+symmetric underbid, and [RESULTS.md](./chaos/RESULTS.md) explains why an earlier
+version of this table claimed it was.
 
 **Congestion** cost the baselines two and three transactions to
 `-32000 "already known"`. KeeperHub sequenced all four.
